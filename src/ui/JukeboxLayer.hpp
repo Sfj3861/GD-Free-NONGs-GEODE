@@ -357,6 +357,9 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             return;
         }
 
+        // Remove an older replacement first. If the remote download or
+        // integrity check fails, the game's original track remains the fallback.
+        gfn::local_library::clearPathForSong(item.songId);
         setStatus(fmt::format(
             "Syncing website selection {}/{}...",
             index + 1, entries->size()
@@ -427,10 +430,13 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 for (auto const& row : parsed.unwrap()["selections"]) {
                     RemoteSelection item;
                     auto songText = row["gd_song_id"].asString().unwrapOr("");
-                    try {
-                        item.songId = std::stoi(songText);
-                    } catch (...) {
-                        item.songId = 0;
+                    if (!songText.empty() &&
+                        songText.find_first_not_of("0123456789") == std::string::npos) {
+                        try {
+                            item.songId = std::stoi(songText);
+                        } catch (...) {
+                            item.songId = 0;
+                        }
                     }
                     item.nongId = row["nong_id"].asInt().unwrapOr(0);
                     item.original = row["is_original"].asBool().unwrapOr(false);
