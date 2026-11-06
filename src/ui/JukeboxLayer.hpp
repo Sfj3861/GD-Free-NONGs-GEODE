@@ -261,7 +261,12 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                             setStatus("Could not write the downloaded audio file.");
                             return;
                         }
-                        gfn::local_library::setPathForSong(std::stoi(m_currentSongId), target.string());
+                        try {
+                            gfn::local_library::setPathForSong(std::stoi(m_currentSongId), target.string());
+                        } catch (...) {
+                            setStatus("Downloaded, but this song ID is outside the supported local ID range.");
+                            return;
+                        }
                         setStatus("NONG installed and selected for this song!");
                     }
                 );
