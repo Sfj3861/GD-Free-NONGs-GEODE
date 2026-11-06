@@ -28,7 +28,8 @@ assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
 assert 'loadSongs()' in jukebox
 assert 'loadNongs(' in jukebox
-assert '/api/v1/songs' in jukebox
+assert '/api/v1/catalog/songs' in jukebox
+assert 'limit=7' in jukebox
 assert '/api/v1/selections/save' in jukebox
 assert '/api/v1/nongs/' in jukebox
 assert 'onUseOriginal' in jukebox
