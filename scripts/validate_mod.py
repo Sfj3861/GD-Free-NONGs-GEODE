@@ -25,6 +25,7 @@ assert '#include "ui/JukeboxLayer.hpp"' in main
 assert 'GFNJukeboxLayer::create()' in main
 assert 'getChildByID(\"bottom-menu\")' in main
 assert 'onOpenGFNJukebox' in main
+assert 'fallbackMenu' in main
 assert 'gfn-open-jukebox' in main
 assert 'listenForKeybindSettingPresses' in main
 assert 'listenForKeybindSettingPresses' in main
