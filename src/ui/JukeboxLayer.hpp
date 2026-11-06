@@ -362,11 +362,19 @@ public:
         auto searchButton = searchLabel ? cocos2d::CCMenuItemLabel::create(
             searchLabel, this, menu_selector(GFNJukeboxLayer::onSearch)
         ) : nullptr;
+        auto clearLabel = cocos2d::CCLabelTTF::create("Clear", "bigFont.fnt", 0.36f);
+        auto clearButton = clearLabel ? cocos2d::CCMenuItemLabel::create(
+            clearLabel, this, menu_selector(GFNJukeboxLayer::onClearSearch)
+        ) : nullptr;
         auto searchMenu = cocos2d::CCMenu::create();
         if (searchMenu) {
             if (searchButton) {
-                searchButton->setPosition({ 0.f, 0.f });
+                searchButton->setPosition({ -28.f, 0.f });
                 searchMenu->addChild(searchButton);
+            }
+            if (clearButton) {
+                clearButton->setPosition({ 55.f, 0.f });
+                searchMenu->addChild(clearButton);
             }
             searchMenu->setPosition({ size.width * 0.79f, size.height * 0.59f });
             this->addChild(searchMenu, 4);
@@ -403,6 +411,15 @@ public:
         if (!m_searchInput) return;
         m_searchInput->defocus();
         m_searchQuery = m_searchInput->getString();
+        loadSongs(1);
+    }
+
+    void onClearSearch(cocos2d::CCObject*) {
+        if (m_searchInput) {
+            m_searchInput->setString("", false);
+            m_searchInput->defocus();
+        }
+        m_searchQuery.clear();
         loadSongs(1);
     }
 
