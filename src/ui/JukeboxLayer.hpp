@@ -31,6 +31,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     std::string m_currentSongId;
     std::vector<SongEntry> m_songs;
     std::vector<NongEntry> m_nongs;
+    int m_catalogPage = 1;
+    int m_catalogPages = 0;
     cocos2d::CCLabelTTF* m_status = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
 
@@ -84,11 +86,12 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
 
     void showSongs() {
         showMenu();
-        setStatus("Community song catalogue");
+        setStatus(fmt::format("Community song catalogue · Page {} / {}",
+            m_catalogPage, std::max(m_catalogPages, 1)));
         if (m_songs.empty()) {
             setStatus("No songs found in the community catalogue.");
-            return;
         }
+
         auto count = std::min<size_t>(m_songs.size(), 7);
         for (size_t i = 0; i < count; ++i) {
             auto label = cocos2d::CCLabelTTF::create(
@@ -101,17 +104,43 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             );
             if (!item) continue;
             item->setTag(static_cast<int>(i));
-            item->setPosition({ 0.f, 105.f - static_cast<float>(i) *  thirtyFive() });
+            item->setPosition({ 0.f, 105.f - static_cast<float>(i) * thirtyFive() });
             m_menu->addChild(item);
+        }
+
+        if (m_catalogPage > 1) {
+            auto label = cocos2d::CCLabelTTF::create("← Previous", "bigFont.fnt", 0.34f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(
+                label, this, menu_selector(GFNJukeboxLayer::onPreviousPage)
+            ) : nullptr;
+            if (button) {
+                button->setPosition({ -85.f, -150.f });
+                m_menu->addChild(button);
+            }
+        }
+
+        if (m_catalogPage < m_catalogPages) {
+            auto label = cocos2d::CCLabelTTF::create("Next →", "bigFont.fnt", 0.34f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(
+                label, this, menu_selector(GFNJukeboxLayer::onNextPage)
+            ) : nullptr;
+            if (button) {
+                button->setPosition({ 85.f, -150.f });
+                m_menu->addChild(button);
+            }
         }
     }
 
     static constexpr float thirtyFive() { return 35.f; }
 
-    void loadSongs() {
+    void loadSongs(int page = 1) {
         if (!configureServer()) return;
+        page = std::max(page, 1);
         setStatus("Loading community catalogue...");
-        auto url = m_baseUrl + "/api/v1/songs";
+        auto url = fmt::format(
+            "{}/api/v1/catalog/songs?page={}&limit=7",
+            m_baseUrl, page
+        );
         this->retain();
         geode::async::spawn(
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
@@ -123,17 +152,28 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     return;
                 }
                 auto parsed = response.json();
-                if (!parsed || !parsed.unwrap().isArray()) {
+                if (!parsed || !parsed.unwrap().isObject() ||
+                    !parsed.unwrap()["items"].isArray() ||
+                    !parsed.unwrap()["pagination"].isObject()) {
                     setStatus("The server returned an invalid catalogue.");
                     return;
                 }
+
+                auto const& data = parsed.unwrap();
+                auto rawPage = data["pagination"]["page"].asInt().unwrapOr(1);
+                auto rawPages = data["pagination"]["pages"].asInt().unwrapOr(0);
+                m_catalogPage = static_cast<int>(std::clamp<int64_t>(rawPage, 1, 1000000));
+                m_catalogPages = static_cast<int>(std::clamp<int64_t>(rawPages, 0, 1000000));
+
                 m_songs.clear();
-                for (auto const& row : parsed.unwrap()) {
+                for (auto const& row : data["items"]) {
                     auto id = row["gd_song_id"].asString().unwrapOr("");
                     auto name = row["name"].asString().unwrapOr("Unknown song");
                     auto rawCount = row["nongs"].asInt().unwrapOr(0);
                     auto count = static_cast<int>(std::clamp<int64_t>(rawCount, 0, 1000000));
-                    if (!id.empty() && id.find_first_not_of("0123456789") == std::string::npos) m_songs.push_back({ id, name, count });
+                    if (!id.empty() && id.find_first_not_of("0123456789") == std::string::npos) {
+                        m_songs.push_back({ id, name, count });
+                    }
                 }
                 showSongs();
             }
@@ -330,7 +370,15 @@ public:
         return true;
     }
 
-    void onRefresh(cocos2d::CCObject*) { loadSongs(); }
+    void onRefresh(cocos2d::CCObject*) { loadSongs(1); }
+
+    void onPreviousPage(cocos2d::CCObject*) {
+        if (m_catalogPage > 1) loadSongs(m_catalogPage - 1);
+    }
+
+    void onNextPage(cocos2d::CCObject*) {
+        if (m_catalogPage < m_catalogPages) loadSongs(m_catalogPage + 1);
+    }
 
     void onSongSelected(cocos2d::CCObject* sender) {
         auto item = static_cast<cocos2d::CCMenuItem*>(sender);
