@@ -23,6 +23,10 @@ music_hook = (root / 'src/hooks/MusicDownloadManager.cpp').read_text(encoding='u
 
 assert '#include "ui/JukeboxLayer.hpp"' in main
 assert 'GFNJukeboxLayer::create()' in main
+assert 'getChildByID(\"bottom-menu\")' in main
+assert 'onOpenGFNJukebox' in main
+assert 'gfn-open-jukebox' in main
+assert 'listenForKeybindSettingPresses' in main
 assert 'listenForKeybindSettingPresses' in main
 assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
