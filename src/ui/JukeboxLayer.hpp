@@ -214,59 +214,63 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     }
 
     void saveSelectionAndDownload(NongEntry entry) {
-        auto mod = geode::Mod::get();
-        if (!mod) return;
-        setStatus("Saving selection and downloading audio...");
-        auto body = fmt::format(
-            "{{\"gd_song_id\":\"{}\",\"nong_id\":{},\"device_id\":\"{}\"}}",
-            m_currentSongId, entry.id, m_deviceId
-        );
-        auto request = geode::utils::web::WebRequest();
-        request.header("Content-Type", "application/json")
-            .timeout(std::chrono::seconds(30))
-            .bodyString(body);
-        auto saveUrl = m_baseUrl + "/api/v1/selections/save";
+        if (m_currentSongId.empty()) return;
+        int numericSongId = 0;
+        try {
+            numericSongId = std::stoi(m_currentSongId);
+        } catch (...) {
+            setStatus("This song ID is outside the supported local ID range.");
+            return;
+        }
+        const auto songId = m_currentSongId;
+        const auto baseUrl = m_baseUrl;
+        setStatus("Downloading and verifying NONG audio...");
+        const auto downloadUrl = baseUrl + "/api/v1/nongs/" + std::to_string(entry.id) + "/download";
         this->retain();
         geode::async::spawn(
-            request.post(saveUrl),
-            [this, entry](geode::utils::web::WebResponse saved) {
+            geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
+            [this, entry, songId, numericSongId, baseUrl](geode::utils::web::WebResponse audio) {
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
-                if (!saved.ok()) {
-                    setStatus(fmt::format("Could not save selection (HTTP {}).", saved.code()));
+                if (!audio.ok()) {
+                    setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
                     return;
                 }
-                auto downloadUrl = m_baseUrl + "/api/v1/nongs/" + std::to_string(entry.id) + "/download";
+                auto actualHash = geode::sha256(std::span<uint8_t const>(audio.data().data(), audio.data().size())).toString();
+                if (actualHash != entry.sha256) {
+                    setStatus("Download rejected: SHA-256 checksum mismatch.");
+                    return;
+                }
+                auto mod = geode::Mod::get();
+                if (!mod) return;
+                auto filename = fmt::format("song-{}.{}", songId, entry.format);
+                auto target = mod->getSaveDir() / filename;
+                auto written = audio.into(target);
+                if (!written) {
+                    setStatus("Could not write the downloaded audio file.");
+                    return;
+                }
+
+                auto body = fmt::format(
+                    "{{\"gd_song_id\":\"{}\",\"nong_id\":{},\"device_id\":\"{}\"}}",
+                    songId, entry.id, m_deviceId
+                );
+                auto request = geode::utils::web::WebRequest();
+                request.header("Content-Type", "application/json")
+                    .timeout(std::chrono::seconds(20))
+                    .bodyString(body);
+                setStatus("Audio verified. Saving your selection...");
                 this->retain();
-        geode::async::spawn(
-                    geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
-                    [this, entry](geode::utils::web::WebResponse audio) {
-                AsyncRelease hold{ this };
+                geode::async::spawn(
+                    request.post(baseUrl + "/api/v1/selections/save"),
+                    [this, numericSongId, target](geode::utils::web::WebResponse saved) {
+                        AsyncRelease hold{ this };
                         if (!this->getParent()) return;
-                        if (!audio.ok()) {
-                            setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
+                        if (!saved.ok()) {
+                            setStatus(fmt::format("Audio downloaded, but selection save failed (HTTP {}).", saved.code()));
                             return;
                         }
-                        auto mod = geode::Mod::get();
-                        if (!mod) return;
-                        auto actualHash = geode::sha256(std::span<uint8_t const>(audio.data().data(), audio.data().size())).toString();
-                        if (actualHash != entry.sha256) {
-                            setStatus("Download rejected: SHA-256 checksum mismatch.");
-                            return;
-                        }
-                        auto filename = fmt::format("song-{}.{}", m_currentSongId, entry.format);
-                        auto target = mod->getSaveDir() / filename;
-                        auto written = audio.into(target);
-                        if (!written) {
-                            setStatus("Could not write the downloaded audio file.");
-                            return;
-                        }
-                        try {
-                            gfn::local_library::setPathForSong(std::stoi(m_currentSongId), target.string());
-                        } catch (...) {
-                            setStatus("Downloaded, but this song ID is outside the supported local ID range.");
-                            return;
-                        }
+                        gfn::local_library::setPathForSong(numericSongId, target.string());
                         setStatus("NONG installed and selected for this song!");
                     }
                 );
