@@ -1,13 +1,30 @@
 import json
 from pathlib import Path
 
-metadata = json.loads(Path("mod.json").read_text(encoding="utf-8"))
-assert metadata["name"] == "GD Free NONGs", "The in-game name must not include GEODE"
-assert metadata["geode"] == "v6.0.0-alpha.1", "Unexpected Geode target"
-assert metadata["gd"]["win"] == "2.2091"
-assert metadata["gd"]["android"] == "2.2091"
-assert metadata["id"] == "sfj3861.gdfreenongs"
-assert metadata["settings"]["open-jukebox"]["type"] == "keybind"
-assert metadata["settings"]["open-jukebox"]["default"] == ";"
-assert metadata["settings"]["enabled"]["default"] is True
-print("mod.json metadata checks passed")
+root = Path(__file__).resolve().parents[1]
+metadata = json.loads((root / 'mod.json').read_text(encoding='utf-8'))
+
+assert metadata['name'] == 'GD Free NONGs', 'The in-game name must not include GEODE'
+assert metadata['geode'] == 'v6.0.0-alpha.1', 'Unexpected Geode target'
+assert metadata['gd']['win'] == '2.2091'
+assert metadata['gd']['android'] == '2.2091'
+assert metadata['id'] == 'sfj3861.gdfreenongs'
+assert metadata['settings']['open-jukebox']['type'] == 'keybind'
+assert metadata['settings']['open-jukebox']['default'] == ';'
+assert metadata['settings']['enabled']['default'] is True
+
+main = (root / 'src/main.cpp').read_text(encoding='utf-8')
+jukebox = (root / 'src/ui/JukeboxLayer.hpp').read_text(encoding='utf-8')
+local_library = (root / 'src/core/LocalLibrary.hpp').read_text(encoding='utf-8')
+music_hook = (root / 'src/hooks/MusicDownloadManager.cpp').read_text(encoding='utf-8')
+
+assert '#include "ui/JukeboxLayer.hpp"' in main
+assert 'GFNJukeboxLayer::create()' in main
+assert 'listenForKeybindSettingPresses' in main
+assert 'class GFNJukeboxLayer' in jukebox
+assert 'onClose' in jukebox
+assert 'setPathForSong' in local_library
+assert 'pathForSong(int songID)' in music_hook
+
+print('GD Free NONGs metadata and source-wiring checks passed.')
+print('Note: these checks do not compile or run the Geode mod.')
