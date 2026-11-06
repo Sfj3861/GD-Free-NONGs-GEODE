@@ -16,6 +16,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         std::string name;
         int nongs = 0;
     };
+    struct AsyncRelease { GFNJukeboxLayer* layer; ~AsyncRelease() { layer->release(); } };
+
     struct NongEntry {
         int id = 0;
         std::string name;
@@ -109,9 +111,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         if (!configureServer()) return;
         setStatus("Loading community catalogue...");
         auto url = m_baseUrl + "/api/v1/songs";
+        this->retain();
         geode::async::spawn(
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
             [this](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
                     setStatus(fmt::format("Catalogue request failed (HTTP {}).", response.code()));
@@ -222,6 +226,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         geode::async::spawn(
             request.post(saveUrl),
             [this, entry](geode::utils::web::WebResponse saved) {
+                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!saved.ok()) {
                     setStatus(fmt::format("Could not save selection (HTTP {}).", saved.code()));
@@ -231,6 +236,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 geode::async::spawn(
                     geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
                     [this, entry](geode::utils::web::WebResponse audio) {
+                        AsyncRelease hold{ this };
                         if (!this->getParent()) return;
                         if (!audio.ok()) {
                             setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
@@ -346,6 +352,7 @@ public:
         geode::async::spawn(
             request.post(m_baseUrl + "/api/v1/selections/save"),
             [this, numericSongId](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
                     setStatus(fmt::format("Could not save original selection (HTTP {}).", response.code()));
