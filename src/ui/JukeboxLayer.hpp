@@ -10,6 +10,7 @@
 #include <random>
 #include <span>
 #include <string>
+#include <string_view>
 #include <vector>
 
 class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
@@ -53,9 +54,17 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             setStatus("Set the API URL in mod settings.");
             return false;
         }
-        if (m_baseUrl.rfind("https://", 0) != 0 &&
-            m_baseUrl.rfind("http://127.0.0.1", 0) != 0 &&
-            m_baseUrl.rfind("http://localhost", 0) != 0) {
+        auto isLocalHttp = [](std::string const& url, std::string_view host) {
+            if (url.rfind(host, 0) != 0) return false;
+            if (url.size() == host.size()) return true;
+            const char boundary = url[host.size()];
+            return boundary == ':' || boundary == '/';
+        };
+        const bool secureRemote = m_baseUrl.rfind("https://", 0) == 0;
+        const bool localDevelopment =
+            isLocalHttp(m_baseUrl, "http://localhost") ||
+            isLocalHttp(m_baseUrl, "http://127.0.0.1");
+        if (!secureRemote && !localDevelopment) {
             setStatus("Remote API URLs must use HTTPS.");
             return false;
         }
