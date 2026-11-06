@@ -7,7 +7,10 @@
 - Added selection saving, audio download, SHA-256 verification, and local file registration.
 - Added an action to restore the original song.
 - Added asynchronous callback lifetime guards and clearer failure messages.
-- This development version has not yet been compiled or runtime-tested.
+- Added a touch button to the main menu while retaining keyboard access.
+- Added one-time browser/game pairing codes and a Jukebox action to sync website selections.
+- Website downloads are checked with SHA-256 before local registration; original/unavailable selections clear local replacements.
+- CI builds have succeeded for Windows and Android64; in-game runtime testing is still required.
 
 ## v0.1.0
 - Initial Geode project foundation for Geometry Dash 2.2091.
