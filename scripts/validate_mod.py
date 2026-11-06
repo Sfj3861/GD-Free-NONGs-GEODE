@@ -30,6 +30,8 @@ assert 'void loadSongs(int page = 1)' in jukebox
 assert 'loadNongs(' in jukebox
 assert '/api/v1/catalog/songs' in jukebox
 assert 'limit=7' in jukebox
+assert 'TextInput::create' in jukebox
+assert 'onSearch' in jukebox
 assert '/api/v1/selections/save' in jukebox
 assert '/api/v1/nongs/' in jukebox
 assert 'onUseOriginal' in jukebox
