@@ -15,7 +15,7 @@ public:
     }
 
     bool init() override {
-        if (!CCLayerColor::initWithColor({ 12, 16, 26, 238 })) {
+        if (!CCLayerColor::initWithColor(cocos2d::ccc4(12, 16, 26, 238))) {
             return false;
         }
 
@@ -41,11 +41,11 @@ public:
         }
 
         auto closeLabel = cocos2d::CCLabelTTF::create("Close", "bigFont.fnt", 0.55f);
-        auto close = cocos2d::CCMenuItemLabel::create(
+        auto close = closeLabel ? cocos2d::CCMenuItemLabel::create(
             closeLabel,
             this,
             menu_selector(GFNJukeboxLayer::onClose)
-        );
+        ) : nullptr;
         if (close) {
             auto menu = cocos2d::CCMenu::create(close, nullptr);
             menu->setPosition({ winSize.width / 2, winSize.height * 0.28f });
