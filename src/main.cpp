@@ -85,12 +85,12 @@ class $modify(GFNMenuLayer, MenuLayer) {
             menu->addChild(button);
             menu->updateLayout();
         } else {
-            auto menu = cocos2d::CCMenu::create();
-            if (menu) {
-                menu->addChild(button);
+            auto fallbackMenu = cocos2d::CCMenu::create();
+            if (fallbackMenu) {
+                fallbackMenu->addChild(button);
                 auto size = cocos2d::CCDirector::sharedDirector()->getWinSize();
-                menu->setPosition({ size.width * 0.82f, size.height * 0.12f });
-                this->addChild(menu, 10);
+                fallbackMenu->setPosition({ size.width * 0.82f, size.height * 0.12f });
+                this->addChild(fallbackMenu, 10);
             }
         }
 
