@@ -3,6 +3,7 @@
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
 #include <Geode/utils/crypto.hpp>
+#include <Geode/ui/TextInput.hpp>
 #include "../core/LocalLibrary.hpp"
 #include <chrono>
 #include <algorithm>
@@ -33,6 +34,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     std::vector<NongEntry> m_nongs;
     int m_catalogPage = 1;
     int m_catalogPages = 0;
+    std::string m_searchQuery;
+    geode::TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelTTF* m_status = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
 
@@ -138,8 +141,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         page = std::max(page, 1);
         setStatus("Loading community catalogue...");
         auto url = fmt::format(
-            "{}/api/v1/catalog/songs?page={}&limit=7",
-            m_baseUrl, page
+            "{}/api/v1/catalog/songs?page={}&limit=7&q={}",
+            m_baseUrl, page, m_searchQuery
         );
         this->retain();
         geode::async::spawn(
@@ -345,6 +348,30 @@ public:
             this->addChild(m_status);
         }
 
+        m_searchInput = geode::TextInput::create(size.width * 0.48f, "Search by GD song ID");
+        if (m_searchInput) {
+            m_searchInput->setCommonFilter(geode::CommonFilter::Uint);
+            m_searchInput->setMaxCharCount(32);
+            m_searchInput->setTextAlign(geode::TextInputAlign::Center);
+            m_searchInput->setScale(0.75f);
+            m_searchInput->setPosition({ size.width * 0.39f, size.height * 0.59f });
+            this->addChild(m_searchInput, 3);
+        }
+
+        auto searchLabel = cocos2d::CCLabelTTF::create("Search", "bigFont.fnt", 0.40f);
+        auto searchButton = searchLabel ? cocos2d::CCMenuItemLabel::create(
+            searchLabel, this, menu_selector(GFNJukeboxLayer::onSearch)
+        ) : nullptr;
+        auto searchMenu = cocos2d::CCMenu::create();
+        if (searchMenu) {
+            if (searchButton) {
+                searchButton->setPosition({ 0.f, 0.f });
+                searchMenu->addChild(searchButton);
+            }
+            searchMenu->setPosition({ size.width * 0.79f, size.height * 0.59f });
+            this->addChild(searchMenu, 4);
+        }
+
         auto refreshLabel = cocos2d::CCLabelTTF::create("Refresh catalogue", "bigFont.fnt", 0.48f);
         auto refresh = refreshLabel ? cocos2d::CCMenuItemLabel::create(
             refreshLabel, this, menu_selector(GFNJukeboxLayer::onRefresh)
@@ -371,6 +398,13 @@ public:
     }
 
     void onRefresh(cocos2d::CCObject*) { loadSongs(1); }
+
+    void onSearch(cocos2d::CCObject*) {
+        if (!m_searchInput) return;
+        m_searchInput->defocus();
+        m_searchQuery = m_searchInput->getString();
+        loadSongs(1);
+    }
 
     void onPreviousPage(cocos2d::CCObject*) {
         if (m_catalogPage > 1) loadSongs(m_catalogPage - 1);
