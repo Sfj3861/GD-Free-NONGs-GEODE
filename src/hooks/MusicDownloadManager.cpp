@@ -2,8 +2,7 @@
 #include <Geode/binding/MusicDownloadManager.hpp>
 #include <Geode/modify/MusicDownloadManager.hpp>
 
-#include <filesystem>
-#include <system_error>
+#include <asp/fs/fs.hpp>
 
 #include "../core/LocalLibrary.hpp"
 
@@ -20,9 +19,7 @@ class $modify(GFNMusicDownloadManager, MusicDownloadManager) {
             return MusicDownloadManager::pathForSong(songID);
         }
 
-        std::error_code error;
-        const auto exists = std::filesystem::is_regular_file(replacement, error);
-        if (error || !exists) {
+        if (!asp::fs::exists(replacement)) {
             log::warn(
                 "Selected NONG for song {} is unavailable; using the original song.",
                 songID
@@ -32,6 +29,6 @@ class $modify(GFNMusicDownloadManager, MusicDownloadManager) {
         }
 
         log::debug("Resolving Geometry Dash song {} to its local NONG.", songID);
-        return gd::string(replacement);
+        return replacement;
     }
 };
