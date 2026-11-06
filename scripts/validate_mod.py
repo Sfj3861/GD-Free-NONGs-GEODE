@@ -12,6 +12,8 @@ assert metadata['id'] == 'sfj3861.gdfreenongs'
 assert metadata['settings']['open-jukebox']['type'] == 'keybind'
 assert metadata['settings']['open-jukebox']['default'] == ';'
 assert metadata['settings']['enabled']['default'] is True
+assert metadata['settings']['api-url']['type'] == 'string'
+assert metadata['settings']['api-url']['default'] == ''
 
 main = (root / 'src/main.cpp').read_text(encoding='utf-8')
 jukebox = (root / 'src/ui/JukeboxLayer.hpp').read_text(encoding='utf-8')
@@ -23,6 +25,9 @@ assert 'GFNJukeboxLayer::create()' in main
 assert 'listenForKeybindSettingPresses' in main
 assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
+assert 'onTestConnection' in jukebox
+assert 'WebRequest()' in jukebox
+assert '"/health"' in jukebox
 assert 'setPathForSong' in local_library
 assert 'pathForSong(int songID)' in music_hook
 
