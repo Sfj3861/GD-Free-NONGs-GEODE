@@ -1,0 +1,42 @@
+name: Build Geode mod
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            os: windows-latest
+            target: Win64
+          - name: Android 64-bit
+            os: ubuntu-latest
+            target: Android64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build with the Geode SDK version from mod.json
+        id: build
+        uses: geode-sdk/build-geode-mod@main
+        with:
+          sdk: given
+          target: ${{ matrix.target }}
+          build-config: Release
+
+      - name: Upload .geode package
+        uses: actions/upload-artifact@v4
+        with:
+          name: GD-Free-NONGs-${{ matrix.name }}
+          path: ${{ steps.build.outputs.build-output }}/*.geode
+          if-no-files-found: error
+          retention-days: 14
