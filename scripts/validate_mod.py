@@ -26,7 +26,7 @@ assert 'GFNJukeboxLayer::create()' in main
 assert 'listenForKeybindSettingPresses' in main
 assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
-assert 'loadSongs()' in jukebox
+assert 'void loadSongs(int page = 1)' in jukebox
 assert 'loadNongs(' in jukebox
 assert '/api/v1/catalog/songs' in jukebox
 assert 'limit=7' in jukebox
