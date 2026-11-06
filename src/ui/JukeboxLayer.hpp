@@ -131,7 +131,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 for (auto const& row : parsed.unwrap()) {
                     auto id = row["gd_song_id"].asString().unwrapOr("");
                     auto name = row["name"].asString().unwrapOr("Unknown song");
-                    auto count = row["nongs"].asInt().unwrapOr(0);
+                    auto rawCount = row["nongs"].asInt().unwrapOr(0);
+                    auto count = static_cast<int>(std::clamp<int64_t>(rawCount, 0, 1000000));
                     if (!id.empty() && id.find_first_not_of("0123456789") == std::string::npos) m_songs.push_back({ id, name, count });
                 }
                 showSongs();
