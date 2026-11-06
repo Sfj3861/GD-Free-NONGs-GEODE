@@ -116,7 +116,6 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
             [this](geode::utils::web::WebResponse response) {
                 AsyncRelease hold{ this };
-                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
                     setStatus(fmt::format("Catalogue request failed (HTTP {}).", response.code()));
@@ -231,7 +230,6 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             request.post(saveUrl),
             [this, entry](geode::utils::web::WebResponse saved) {
                 AsyncRelease hold{ this };
-                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!saved.ok()) {
                     setStatus(fmt::format("Could not save selection (HTTP {}).", saved.code()));
@@ -243,7 +241,6 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
                     [this, entry](geode::utils::web::WebResponse audio) {
                 AsyncRelease hold{ this };
-                        AsyncRelease hold{ this };
                         if (!this->getParent()) return;
                         if (!audio.ok()) {
                             setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
@@ -360,7 +357,6 @@ public:
         geode::async::spawn(
             request.post(m_baseUrl + "/api/v1/selections/save"),
             [this, numericSongId](geode::utils::web::WebResponse response) {
-                AsyncRelease hold{ this };
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
