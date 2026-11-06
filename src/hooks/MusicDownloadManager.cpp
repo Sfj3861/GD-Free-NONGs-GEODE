@@ -9,7 +9,7 @@
 using namespace geode::prelude;
 
 class $modify(GFNMusicDownloadManager, MusicDownloadManager) {
-    gd::string pathForSong(int songID) {
+    std::string pathForSong(int songID) {
         if (!Mod::get()->getSettingValue<bool>("enabled")) {
             return MusicDownloadManager::pathForSong(songID);
         }
