@@ -1,7 +1,9 @@
 # GD Free NONGs
 
-A community-powered alternative music manager for Geometry Dash.
+A community-powered alternative audio manager for Geometry Dash.
 
-The in-game Jukebox connects to the GD Free NONGs API. Players can browse songs in the server catalogue, inspect approved alternative audio versions, download a selected version, and restore the original song. Downloaded files are checked against the server-provided SHA-256 digest before being registered in the mod's local song library.
+The in-game Jukebox connects to the GD Free NONGs API. Players can browse a searchable, paginated song catalogue, view approved alternative audio versions, download and verify a selected file using SHA-256, and restore the original song.
 
-The current implementation is an early development build. CI packages have been built for Windows and Android64, but it has not yet been tested inside Geometry Dash on a real installation. The Jukebox includes song ID search, catalogue pagination, a clear-search control, and a touch button in the main menu alongside the keyboard shortcut. Secure device pairing, an in-mod upload UI, NONG-list pagination and production service hardening remain future work. A configured API server must be available; the repository does not provide a hosted public API.
+The browser can be paired with a game installation using a one-time code. Once paired, website selections are assigned to the game device. The Jukebox's **Sync website** action downloads the associated approved audio and applies local replacements after integrity verification.
+
+This is an early development build. CI packages are built for Windows and Android64, but real in-game testing is still required. Direct in-game uploading, pagination of per-song NONG lists, hosted production infrastructure and full account authentication are not implemented. The API must be separately deployed and configured in the mod.
