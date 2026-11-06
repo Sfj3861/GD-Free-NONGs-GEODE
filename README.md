@@ -9,12 +9,13 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 ## Current implementation
 
 - Geode mod project and CMake packaging setup.
-- Explicit game/loader target metadata.
-- Main-menu load hook used as a safe initialization smoke test.
+- Explicit game/loader target metadata for Windows and Android.
+- Main-menu initialization hook.
 - Master enable setting.
-- Architecture notes for the upcoming local library, API client, downloader and music resolver.
+- Configurable universal Jukebox keybind. The default semicolon key code maps to the physical Ñ position on a Spanish keyboard; other layouts can rebind it.
+- Keybind press listener with repeat suppression and master-switch check.
 
-The first commit is a buildable foundation, not a completed NONG replacement engine. Music interception, hotkey registration (Ñ default), Jukebox UI, device authorization and API synchronization must be implemented and tested against the exact 2.2091 executable and Geode alpha SDK before a release can be called functional.
+The hotkey currently logs a diagnostic event; it does not yet open the Jukebox. Music interception, the Jukebox UI, device authorization, API synchronization and local audio management remain under development. This is not yet a functional NONG replacement release.
 
 ## Build
 
