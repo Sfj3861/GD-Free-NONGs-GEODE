@@ -116,6 +116,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
             [this](geode::utils::web::WebResponse response) {
                 AsyncRelease hold{ this };
+                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
                     setStatus(fmt::format("Catalogue request failed (HTTP {}).", response.code()));
@@ -143,9 +144,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         setStatus("Loading available NONGs...");
         showMenu();
         auto url = m_baseUrl + "/api/v1/songs/" + m_currentSongId + "/nongs";
+        this->retain();
         geode::async::spawn(
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
             [this](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
                     setStatus(fmt::format("NONG list request failed (HTTP {}).", response.code()));
@@ -223,9 +226,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             .timeout(std::chrono::seconds(30))
             .bodyString(body);
         auto saveUrl = m_baseUrl + "/api/v1/selections/save";
+        this->retain();
         geode::async::spawn(
             request.post(saveUrl),
             [this, entry](geode::utils::web::WebResponse saved) {
+                AsyncRelease hold{ this };
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!saved.ok()) {
@@ -233,9 +238,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     return;
                 }
                 auto downloadUrl = m_baseUrl + "/api/v1/nongs/" + std::to_string(entry.id) + "/download";
-                geode::async::spawn(
+                this->retain();
+        geode::async::spawn(
                     geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
                     [this, entry](geode::utils::web::WebResponse audio) {
+                AsyncRelease hold{ this };
                         AsyncRelease hold{ this };
                         if (!this->getParent()) return;
                         if (!audio.ok()) {
@@ -349,9 +356,11 @@ public:
             .timeout(std::chrono::seconds(20))
             .bodyString(body);
         setStatus("Restoring original song selection...");
+        this->retain();
         geode::async::spawn(
             request.post(m_baseUrl + "/api/v1/selections/save"),
             [this, numericSongId](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
