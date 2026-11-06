@@ -10,7 +10,7 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 
 - Geode mod project and CMake packaging setup.
 - Explicit game/loader target metadata for Windows and Android.
-- Main-menu initialization hook and master enable setting.
+- Main-menu initialization hook, master enable setting and a visible touch button in the main menu.
 - Configurable universal Jukebox keybind (default `;`, corresponding to the physical Ñ position on a Spanish keyboard; rebind it on other layouts).
 - In-game Jukebox catalogue: loads community songs and approved NONG versions from the backend.
 - Paginated in-game catalogue (seven songs per page) backed by the searchable `/api/v1/catalog/songs` endpoint, with an in-game Geometry Dash song ID search field and a one-tap search reset.
@@ -18,13 +18,13 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 - NONG selection downloads the audio into the mod's private save directory, checks its SHA-256 digest, saves the chosen version for the installation, and registers the local file for the game's song resolver.
 - A “Use original song” action clears the local replacement and saves the original selection.
 - Configurable API base URL in mod settings; loading the catalogue makes a live API request and reports connection or server errors. Remote servers must use HTTPS; HTTP is accepted only for localhost development.
-- Keybind listener opens the Jukebox layer in the running scene, suppresses key-repeat, and checks the master switch.
+- Both the main-menu touch button and keybind open the Jukebox layer in the running scene, suppress duplicate windows, and check the master switch.
 - Persistent per-song local path registry.
 - `MusicDownloadManager::pathForSong(int)` redirection hook for locally installed NONG files, with missing-file fallback to the original song.
 
 ## What is not implemented yet
 
-The Jukebox now has an initial catalogue → approved NONG list → selection/download flow. It currently shows up to seven entries per list and has no pagination, search, upload UI, or secure device pairing. The device identifier is a local installation identifier, not authentication. The C++ mod has not yet been compiled or runtime-tested; successful download and checksum code do not prove that the Geode hook replaces audio correctly.
+The Jukebox supports a paginated song catalogue (seven songs per page), search by Geometry Dash song ID, a clear-search action, approved NONG listing and download/selection. The NONG-version list currently shows up to seven entries and does not yet have its own pagination. The mod has no upload UI or secure device pairing. The device identifier is a local installation identifier, not authentication. CI builds have succeeded for Windows and Android64, but the mod has not yet been tested inside Geometry Dash; successful compilation does not prove that the audio hook works correctly on a real device.
 
 ## Build
 
@@ -39,4 +39,4 @@ The Geode CMake integration creates the package target. Do not package against a
 
 ## Compatibility warning
 
-Geode v6.0.0-alpha.1 is an experimental loader target for GD 2.209x. This project has not yet been built or tested on Windows or Android. A successful metadata check is not a build, and a successful compile is not proof that all platforms or the music hooks work.
+Geode v6.0.0-alpha.1 is an experimental loader target for GD 2.209x. Windows and Android64 CI packages have been built successfully. Runtime compatibility with the installed game, especially the audio replacement hook, still needs to be checked on Windows and a real Android device.
