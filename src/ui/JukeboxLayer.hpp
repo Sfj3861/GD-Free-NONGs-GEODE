@@ -317,6 +317,38 @@ public:
         saveSelectionAndDownload(m_nongs[index]);
     }
 
+    void onUseOriginal(cocos2d::CCObject*) {
+        if (m_currentSongId.empty()) return;
+        int numericSongId = 0;
+        try {
+            numericSongId = std::stoi(m_currentSongId);
+        } catch (...) {
+            setStatus("This song ID cannot be mapped to a local Geometry Dash song.");
+            return;
+        }
+        auto body = fmt::format(
+            "{{\"gd_song_id\":\"{}\",\"nong_id\":null,\"device_id\":\"{}\"}}",
+            m_currentSongId, m_deviceId
+        );
+        auto request = geode::utils::web::WebRequest();
+        request.header("Content-Type", "application/json")
+            .timeout(std::chrono::seconds(20))
+            .bodyString(body);
+        setStatus("Restoring original song selection...");
+        geode::async::spawn(
+            request.post(m_baseUrl + "/api/v1/selections/save"),
+            [this, numericSongId](geode::utils::web::WebResponse response) {
+                if (!this->getParent()) return;
+                if (!response.ok()) {
+                    setStatus(fmt::format("Could not save original selection (HTTP {}).", response.code()));
+                    return;
+                }
+                gfn::local_library::clearPathForSong(numericSongId);
+                setStatus("Original Geometry Dash song restored.");
+            }
+        );
+    }
+
     void onBackToSongs(cocos2d::CCObject*) { showSongs(); }
 
     void onClose(cocos2d::CCObject*) {
