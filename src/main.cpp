@@ -7,6 +7,34 @@
 
 using namespace geode::prelude;
 
+namespace {
+constexpr int GFN_JUKEBOX_TAG = 0x47464E;
+
+void openGFNJukebox() {
+    auto mod = Mod::get();
+    if (!mod || !mod->getSettingValue<bool>("enabled")) {
+        return;
+    }
+
+    auto scene = CCDirector::sharedDirector()->getRunningScene();
+    if (!scene) {
+        log::warn("Cannot open GD Free NONGs: no running scene.");
+        return;
+    }
+
+    if (scene->getChildByTag(GFN_JUKEBOX_TAG)) {
+        return;
+    }
+
+    auto jukebox = GFNJukeboxLayer::create();
+    if (jukebox) {
+        jukebox->setTag(GFN_JUKEBOX_TAG);
+        scene->addChild(jukebox, 1000);
+        log::info("GD Free NONGs Jukebox opened.");
+    }
+}
+}
+
 $on_mod(Loaded) {
     log::info("GD Free NONGs v0.2.0 loaded.");
 }
@@ -18,28 +46,7 @@ $on_game(Loaded) {
             if (!down || repeat) {
                 return;
             }
-
-            auto mod = Mod::get();
-            if (!mod || !mod->getSettingValue<bool>("enabled")) {
-                return;
-            }
-
-            auto scene = CCDirector::sharedDirector()->getRunningScene();
-            if (!scene) {
-                log::warn("Cannot open GD Free NONGs: no running scene.");
-                return;
-            }
-
-            if (scene->getChildByTag(0x47464E)) {
-                return;
-            }
-
-            auto jukebox = GFNJukeboxLayer::create();
-            if (jukebox) {
-                jukebox->setTag(0x47464E);
-                scene->addChild(jukebox, 1000);
-                log::info("GD Free NONGs Jukebox opened.");
-            }
+            openGFNJukebox();
         }
     );
 }
@@ -51,10 +58,47 @@ class $modify(GFNMenuLayer, MenuLayer) {
         }
 
         auto mod = Mod::get();
-        if (mod && mod->getSettingValue<bool>("enabled")) {
-            log::info("GD Free NONGs is enabled.");
+        if (!mod || !mod->getSettingValue<bool>("enabled")) {
+            return true;
         }
 
+        // A visible touch target makes the Jukebox accessible on Android
+        // devices that do not have a physical keyboard attached.
+        auto label = cocos2d::CCLabelBMFont::create("NONGs", "goldFont.fnt");
+        if (!label) {
+            log::warn("Could not create the GD Free NONGs menu label.");
+            return true;
+        }
+
+        auto button = cocos2d::CCMenuItemLabel::create(
+            label, this, menu_selector(GFNMenuLayer::onOpenGFNJukebox)
+        );
+        if (!button) {
+            log::warn("Could not create the GD Free NONGs menu button.");
+            return true;
+        }
+
+        button->setID("gfn-open-jukebox"_spr);
+        button->setScale(0.75f);
+
+        if (auto menu = this->getChildByID("bottom-menu")) {
+            menu->addChild(button);
+            menu->updateLayout();
+        } else {
+            auto menu = cocos2d::CCMenu::create();
+            if (menu) {
+                menu->addChild(button);
+                auto size = cocos2d::CCDirector::sharedDirector()->getWinSize();
+                menu->setPosition({ size.width * 0.82f, size.height * 0.12f });
+                this->addChild(menu, 10);
+            }
+        }
+
+        log::info("GD Free NONGs touch button added to the main menu.");
         return true;
+    }
+
+    void onOpenGFNJukebox(cocos2d::CCObject*) {
+        openGFNJukebox();
     }
 };
