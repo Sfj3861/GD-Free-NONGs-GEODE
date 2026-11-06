@@ -3,7 +3,7 @@
 ## v0.2.0
 - Added the in-game Jukebox catalogue backed by the community API.
 - Added approved NONG listing per Geometry Dash song.
-- Added searchable paginated song catalogue in the backend, browser UI and in-game Jukebox.
+- Added searchable paginated song catalogue in the backend, browser UI and in-game Jukebox, including in-game song ID search.
 - Added selection saving, audio download, SHA-256 verification, and local file registration.
 - Added an action to restore the original song.
 - Added asynchronous callback lifetime guards and clearer failure messages.
