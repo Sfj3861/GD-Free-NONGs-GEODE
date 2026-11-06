@@ -5,7 +5,7 @@ root = Path(__file__).resolve().parents[1]
 metadata = json.loads((root / 'mod.json').read_text(encoding='utf-8'))
 
 assert metadata['name'] == 'GD Free NONGs', 'The in-game name must not include GEODE'
-assert metadata['geode'] == 'v6.0.0-alpha.1', 'Unexpected Geode target'
+assert metadata['geode'] == '6.0.0-alpha.1', 'Use the canonical SDK version without a leading v'
 assert metadata['gd']['win'] == '2.2091'
 assert metadata['gd']['android'] == '2.2091'
 assert metadata['id'] == 'sfj3861.gdfreenongs'
