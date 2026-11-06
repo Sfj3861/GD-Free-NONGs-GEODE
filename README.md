@@ -12,14 +12,15 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 - Explicit game/loader target metadata for Windows and Android.
 - Main-menu initialization hook and master enable setting.
 - Configurable universal Jukebox keybind (default `;`, corresponding to the physical Ñ position on a Spanish keyboard; rebind it on other layouts).
-- Initial in-game Jukebox layer with title, information text, and close control.
+- Initial in-game Jukebox layer with title, API connection test, and close control.
+- Configurable API base URL in mod settings; the Jukebox can asynchronously test the server `/health` endpoint. Remote servers must use HTTPS; HTTP is accepted only for localhost development.
 - Keybind listener opens the Jukebox layer in the running scene, suppresses key-repeat, and checks the master switch.
 - Persistent per-song local path registry.
 - `MusicDownloadManager::pathForSong(int)` redirection hook for locally installed NONG files, with missing-file fallback to the original song.
 
 ## What is not implemented yet
 
-The current Jukebox is only a visual shell. It does not list community songs, search, upload, select or download NONGs. The mod is not yet connected to the backend, and there is no device pairing or authorization flow. The local path resolver has not been compiled or runtime-tested, so actual song replacement is not verified.
+The current Jukebox is an early interface. It can test connectivity to a configured API server, but it does not yet list community songs, search, upload, select or download NONGs. The mod is not yet connected to the backend, and there is no device pairing or authorization flow. The local path resolver has not been compiled or runtime-tested, so actual song replacement is not verified.
 
 ## Build
 
