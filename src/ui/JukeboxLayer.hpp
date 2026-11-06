@@ -72,7 +72,7 @@ public:
             baseUrl.pop_back();
         }
         if (baseUrl.empty()) {
-            geode::FLAlertLayer::create(
+            FLAlertLayer::create(
                 "API not configured",
                 "Set the GD Free NONGs API URL in the mod settings first.",
                 "OK"
@@ -80,7 +80,7 @@ public:
             return;
         }
         if (baseUrl.rfind("https://", 0) != 0 && baseUrl.rfind("http://127.0.0.1", 0) != 0 && baseUrl.rfind("http://localhost", 0) != 0) {
-            geode::FLAlertLayer::create(
+            FLAlertLayer::create(
                 "Invalid API URL",
                 "Use HTTPS for remote servers. HTTP is allowed only for localhost development.",
                 "OK"
@@ -94,13 +94,13 @@ public:
                 .get(baseUrl + "/health"),
             [](geode::utils::web::WebResponse response) {
                 if (response.ok()) {
-                    geode::FLAlertLayer::create(
+                    FLAlertLayer::create(
                         "API connection successful",
                         fmt::format("Server responded with HTTP {}.", response.code()).c_str(),
                         "OK"
                     )->show();
                 } else {
-                    geode::FLAlertLayer::create(
+                    FLAlertLayer::create(
                         "API connection failed",
                         fmt::format("HTTP {}. Check the URL and server status.", response.code()).c_str(),
                         "OK"
