@@ -2,29 +2,35 @@
 
 Geometry Dash mod client for the GD Free NONGs community platform.
 
-**Target:** Geometry Dash 2.2091 · Geode v6.0.0-alpha.1 (experimental target).
+**Targets:** Geometry Dash 2.2091 · Geode 6.0.0-alpha.1 (experimental).
 
-The in-game product name is **GD Free NONGs**. “GEODE” appears only in this repository name and build tooling.
+The in-game product name is **GD Free NONGs**. “GEODE” is used only for the repository and build tooling.
 
 ## Current implementation
 
-- Geode mod project and CMake packaging setup.
-- Explicit game/loader target metadata for Windows and Android.
-- Main-menu initialization hook, master enable setting and a visible touch button in the main menu.
-- Configurable universal Jukebox keybind (default `;`, corresponding to the physical Ñ position on a Spanish keyboard; rebind it on other layouts).
-- In-game Jukebox catalogue: loads community songs and approved NONG versions from the backend.
-- Paginated in-game catalogue (seven songs per page) backed by the searchable `/api/v1/catalog/songs` endpoint, with an in-game Geometry Dash song ID search field and a one-tap search reset.
-- Browser library uses server-side search and pagination (18 songs per page).
-- NONG selection downloads the audio into the mod's private save directory, checks its SHA-256 digest, saves the chosen version for the installation, and registers the local file for the game's song resolver.
-- A “Use original song” action clears the local replacement and saves the original selection.
-- Configurable API base URL in mod settings; loading the catalogue makes a live API request and reports connection or server errors. Remote servers must use HTTPS; HTTP is accepted only for localhost development.
-- Both the main-menu touch button and keybind open the Jukebox layer in the running scene, suppress duplicate windows, and check the master switch.
-- Persistent per-song local path registry.
-- `MusicDownloadManager::pathForSong(int)` redirection hook for locally installed NONG files, with missing-file fallback to the original song.
+- Geode project metadata and CMake packaging for Windows and Android64.
+- Master enable setting and configurable API base URL.
+- Main-menu touch button for opening the Jukebox, plus the configurable keyboard shortcut.
+- Searchable catalogue of Geometry Dash song IDs, with seven songs per page and previous/next controls.
+- One-tap clearing of the in-game song ID search.
+- Approved NONG versions listed for each Geometry Dash song.
+- Download of approved audio into the mod's private save directory.
+- SHA-256 verification before any downloaded audio is registered.
+- Local song resolver hook with fallback to the original game path when no valid local file is registered.
+- Restore-original action for a song.
+- One-time browser/game pairing: the Jukebox requests a 16-character code that expires after 10 minutes and can only be claimed once from the web PAIR tab.
+- Pairing requests and claims are rate-limited by the API-observed client IP; production deployments behind a reverse proxy must also apply edge rate limiting.
+- **Sync website** fetches selections associated with the paired game device, downloads approved NONGs, validates their SHA-256 values, and installs local replacements. Original or unavailable selections clear the corresponding local replacement.
+- Remote API URLs must use HTTPS; HTTP is accepted only for exact localhost/127.0.0.1 development hosts.
 
-## What is not implemented yet
+## Not implemented yet
 
-The Jukebox supports a paginated song catalogue (seven songs per page), search by Geometry Dash song ID, a clear-search action, approved NONG listing and download/selection. The NONG-version list currently shows up to seven entries and does not yet have its own pagination. The mod has no upload UI or secure device pairing. The device identifier is a local installation identifier, not authentication. CI builds have succeeded for Windows and Android64, but the mod has not yet been tested inside Geometry Dash; successful compilation does not prove that the audio hook works correctly on a real device.
+- Uploading NONG files directly from inside the game.
+- Pagination/search for the list of NONG versions within an individual song.
+- A full user-account system or multi-factor authentication; pairing is a one-time device-linking flow, not account identity verification.
+- Production hosting, persistent managed database/object storage, backups, monitoring, abuse reporting and a full rights/takedown process.
+
+The API repository must be deployed and configured in the mod's **API URL** setting before online functionality can be used. No public API server is provided by this repository.
 
 ## Build
 
@@ -35,8 +41,8 @@ cmake -S . -B build
 cmake --build build --config Release
 ```
 
-The Geode CMake integration creates the package target. Do not package against a stable SDK targeting 2.2081 and relabel it as 2.2091.
+The Geode CMake integration creates the package target. Do not build against a stable SDK targeting another Geometry Dash version and relabel the result as 2.2091.
 
-## Compatibility warning
+## Compatibility and testing
 
-Geode v6.0.0-alpha.1 is an experimental loader target for GD 2.209x. Windows and Android64 CI packages have been built successfully. Runtime compatibility with the installed game, especially the audio replacement hook, still needs to be checked on Windows and a real Android device.
+GitHub Actions has produced Windows and Android64 packages for this project. A successful CI compile verifies that the code builds against the declared SDK; it does **not** replace testing the mod inside Geometry Dash on real devices. In particular, confirm that the main-menu button is positioned correctly and that the music resolver replaces audio on Android and Windows.
