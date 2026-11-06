@@ -7,6 +7,7 @@
 #include "../core/LocalLibrary.hpp"
 #include <chrono>
 #include <algorithm>
+#include <memory>
 #include <random>
 #include <span>
 #include <string>
@@ -24,6 +25,15 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     struct NongEntry {
         int id = 0;
         std::string name;
+        std::string format;
+        std::string sha256;
+    };
+
+    struct RemoteSelection {
+        int songId = 0;
+        int nongId = 0;
+        bool original = false;
+        bool unavailable = false;
         std::string format;
         std::string sha256;
     };
@@ -266,6 +276,178 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         }
     }
 
+    void requestPairingCode() {
+        if (!configureServer()) return;
+
+        auto body = fmt::format("{{\"device_id\":\"{}\"}}", m_deviceId);
+        auto request = geode::utils::web::WebRequest();
+        request.header("Content-Type", "application/json")
+            .timeout(std::chrono::seconds(20))
+            .bodyString(body);
+        setStatus("Requesting one-time website pairing code...");
+        this->retain();
+        geode::async::spawn(
+            request.post(m_baseUrl + "/api/v1/pairing/request"),
+            [this](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
+                if (!this->getParent()) return;
+                if (!response.ok()) {
+                    setStatus(fmt::format("Pairing request failed (HTTP {}).", response.code()));
+                    return;
+                }
+                auto parsed = response.json();
+                if (!parsed || !parsed.unwrap().isObject()) {
+                    setStatus("The server returned an invalid pairing response.");
+                    return;
+                }
+                auto code = parsed.unwrap()["code"].asString().unwrapOr("");
+                if (code.size() != 16) {
+                    setStatus("The server returned an invalid pairing code.");
+                    return;
+                }
+                setStatus(fmt::format(
+                    "PAIR CODE: {} — enter it in the website PAIR tab. Expires in 10 minutes.",
+                    code
+                ));
+            }
+        );
+    }
+
+    void syncNext(
+        std::shared_ptr<std::vector<RemoteSelection>> const& entries,
+        size_t index,
+        size_t installed,
+        size_t cleared,
+        size_t failed
+    ) {
+        // Apply original/unavailable selections locally and locate the next
+        // downloadable NONG before starting another asynchronous request.
+        while (index < entries->size()) {
+            auto const& item = (*entries)[index];
+            if (item.songId <= 0) {
+                ++failed;
+                ++index;
+                continue;
+            }
+            if (item.original || item.unavailable) {
+                gfn::local_library::clearPathForSong(item.songId);
+                ++cleared;
+                ++index;
+                continue;
+            }
+            break;
+        }
+
+        if (index >= entries->size()) {
+            setStatus(fmt::format(
+                "Website sync complete · {} installed, {} reset, {} failed.",
+                installed, cleared, failed
+            ));
+            return;
+        }
+
+        auto const item = (*entries)[index];
+        if (item.nongId <= 0 ||
+            (item.format != "mp3" && item.format != "ogg" &&
+             item.format != "wav" && item.format != "flac" &&
+             item.format != "m4a") ||
+            item.sha256.size() != 64) {
+            syncNext(entries, index + 1, installed, cleared, failed + 1);
+            return;
+        }
+
+        setStatus(fmt::format(
+            "Syncing website selection {}/{}...",
+            index + 1, entries->size()
+        ));
+        auto url = fmt::format(
+            "{}/api/v1/nongs/{}/download", m_baseUrl, item.nongId
+        );
+        this->retain();
+        geode::async::spawn(
+            geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(url),
+            [this, entries, index, installed, cleared, failed, item](geode::utils::web::WebResponse audio) {
+                AsyncRelease hold{ this };
+                if (!this->getParent()) return;
+                if (!audio.ok()) {
+                    syncNext(entries, index + 1, installed, cleared, failed + 1);
+                    return;
+                }
+
+                auto actualHash = geode::sha256(
+                    std::span<uint8_t const>(audio.data().data(), audio.data().size())
+                ).toString();
+                if (actualHash != item.sha256) {
+                    syncNext(entries, index + 1, installed, cleared, failed + 1);
+                    return;
+                }
+
+                auto mod = geode::Mod::get();
+                if (!mod) {
+                    syncNext(entries, index + 1, installed, cleared, failed + 1);
+                    return;
+                }
+                auto target = mod->getSaveDir() /
+                    fmt::format("song-{}.{}", item.songId, item.format);
+                auto written = audio.into(target);
+                if (!written) {
+                    syncNext(entries, index + 1, installed, cleared, failed + 1);
+                    return;
+                }
+
+                gfn::local_library::setPathForSong(item.songId, target.string());
+                syncNext(entries, index + 1, installed + 1, cleared, failed);
+            }
+        );
+    }
+
+    void syncWebsiteSelections() {
+        if (!configureServer()) return;
+        setStatus("Checking selections saved from the website...");
+        const auto url = m_baseUrl + "/api/v1/sync/" + m_deviceId;
+        this->retain();
+        geode::async::spawn(
+            geode::utils::web::WebRequest().timeout(std::chrono::seconds(25)).get(url),
+            [this](geode::utils::web::WebResponse response) {
+                AsyncRelease hold{ this };
+                if (!this->getParent()) return;
+                if (!response.ok()) {
+                    setStatus(fmt::format("Website sync failed (HTTP {}).", response.code()));
+                    return;
+                }
+                auto parsed = response.json();
+                if (!parsed || !parsed.unwrap().isObject() ||
+                    !parsed.unwrap()["selections"].isArray()) {
+                    setStatus("The server returned an invalid sync response.");
+                    return;
+                }
+
+                auto entries = std::make_shared<std::vector<RemoteSelection>>();
+                for (auto const& row : parsed.unwrap()["selections"]) {
+                    RemoteSelection item;
+                    auto songText = row["gd_song_id"].asString().unwrapOr("");
+                    try {
+                        item.songId = std::stoi(songText);
+                    } catch (...) {
+                        item.songId = 0;
+                    }
+                    item.nongId = row["nong_id"].asInt().unwrapOr(0);
+                    item.original = row["is_original"].asBool().unwrapOr(false);
+                    item.unavailable = row["status"].asString().unwrapOr("") == "unavailable";
+                    item.format = row["format"].asString().unwrapOr("");
+                    item.sha256 = row["sha256"].asString().unwrapOr("");
+                    entries->push_back(std::move(item));
+                }
+
+                if (entries->empty()) {
+                    setStatus("No website selections are linked to this game device yet.");
+                    return;
+                }
+                syncNext(entries, 0, 0, 0, 0);
+            }
+        );
+    }
+
     void saveSelectionAndDownload(NongEntry entry) {
         if (m_currentSongId.empty()) return;
         int numericSongId = 0;
@@ -389,22 +571,38 @@ public:
             this->addChild(searchMenu, 4);
         }
 
-        auto refreshLabel = cocos2d::CCLabelTTF::create("Refresh catalogue", "bigFont.fnt", 0.48f);
+        auto refreshLabel = cocos2d::CCLabelTTF::create("Refresh", "bigFont.fnt", 0.38f);
         auto refresh = refreshLabel ? cocos2d::CCMenuItemLabel::create(
             refreshLabel, this, menu_selector(GFNJukeboxLayer::onRefresh)
         ) : nullptr;
-        auto closeLabel = cocos2d::CCLabelTTF::create("Close", "bigFont.fnt", 0.48f);
+        auto pairLabel = cocos2d::CCLabelTTF::create("Pair website", "bigFont.fnt", 0.34f);
+        auto pair = pairLabel ? cocos2d::CCMenuItemLabel::create(
+            pairLabel, this, menu_selector(GFNJukeboxLayer::onPairWebsite)
+        ) : nullptr;
+        auto syncLabel = cocos2d::CCLabelTTF::create("Sync website", "bigFont.fnt", 0.34f);
+        auto sync = syncLabel ? cocos2d::CCMenuItemLabel::create(
+            syncLabel, this, menu_selector(GFNJukeboxLayer::onSyncWebsite)
+        ) : nullptr;
+        auto closeLabel = cocos2d::CCLabelTTF::create("Close", "bigFont.fnt", 0.38f);
         auto close = closeLabel ? cocos2d::CCMenuItemLabel::create(
             closeLabel, this, menu_selector(GFNJukeboxLayer::onClose)
         ) : nullptr;
         auto controls = cocos2d::CCMenu::create();
         if (controls) {
             if (refresh) {
-                refresh->setPosition({ -85.f, 0.f });
+                refresh->setPosition({ -150.f, 0.f });
                 controls->addChild(refresh);
             }
+            if (pair) {
+                pair->setPosition({ -50.f, 0.f });
+                controls->addChild(pair);
+            }
+            if (sync) {
+                sync->setPosition({ 55.f, 0.f });
+                controls->addChild(sync);
+            }
             if (close) {
-                close->setPosition({ 85.f, 0.f });
+                close->setPosition({ 150.f, 0.f });
                 controls->addChild(close);
             }
             controls->setPosition({ size.width / 2, size.height * 0.12f });
@@ -415,6 +613,10 @@ public:
     }
 
     void onRefresh(cocos2d::CCObject*) { loadSongs(1); }
+
+    void onPairWebsite(cocos2d::CCObject*) { requestPairingCode(); }
+
+    void onSyncWebsite(cocos2d::CCObject*) { syncWebsiteSelections(); }
 
     void onSearch(cocos2d::CCObject*) {
         if (!m_searchInput) return;
