@@ -12,10 +12,12 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 - Explicit game/loader target metadata for Windows and Android.
 - Main-menu initialization hook.
 - Master enable setting.
-- Configurable universal Jukebox keybind. The default semicolon key code maps to the physical Ñ position on a Spanish keyboard; other layouts can rebind it.
+- Configurable universal Jukebox keybind.
+- Persistent per-song local path registry.
+- `MusicDownloadManager::pathForSong(int)` redirection hook for locally installed NONG files, with missing-file fallback to the original song. The default semicolon key code maps to the physical Ñ position on a Spanish keyboard; other layouts can rebind it.
 - Keybind press listener with repeat suppression and master-switch check.
 
-The hotkey currently logs a diagnostic event; it does not yet open the Jukebox. Music interception, the Jukebox UI, device authorization, API synchronization and local audio management remain under development. This is not yet a functional NONG replacement release.
+The Ñ hotkey currently logs a diagnostic event; it does not yet open the Jukebox. The path resolver is wired to Geode's 2.2091 `MusicDownloadManager::pathForSong` binding and reads per-song local paths from Geode save data. The downloader and selection-sync pipeline that populate those paths, the Jukebox UI, and device authorization remain under development. The hook has not yet been compiled or runtime-tested, so this is not yet a release-ready NONG replacement.
 
 ## Build
 
