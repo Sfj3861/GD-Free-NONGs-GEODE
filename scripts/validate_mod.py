@@ -38,6 +38,14 @@ assert 'limit=7' in jukebox
 assert 'TextInput::create' in jukebox
 assert 'onSearch' in jukebox
 assert 'onClearSearch' in jukebox
+assert 'onPairWebsite' in jukebox
+assert 'requestPairingCode' in jukebox
+assert '/api/v1/pairing/request' in jukebox
+assert 'onSyncWebsite' in jukebox
+assert 'syncWebsiteSelections' in jukebox
+assert '/api/v1/sync/' in jukebox
+assert 'RemoteSelection' in jukebox
+assert 'actualHash != item.sha256' in jukebox
 assert '/api/v1/selections/save' in jukebox
 assert '/api/v1/nongs/' in jukebox
 assert 'onUseOriginal' in jukebox
