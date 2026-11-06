@@ -9,7 +9,11 @@
   "version": "v0.1.1",
   "developer": "Sfj3861",
   "description": "Manage alternative Geometry Dash song versions with the GD Free NONGs community library.",
-  "tags": ["music", "utility", "enhancement"],
+  "tags": [
+    "music",
+    "utility",
+    "enhancement"
+  ],
   "settings": {
     "enabled": {
       "name": "Enable GD Free NONGs",
@@ -23,6 +27,12 @@
       "type": "keybind",
       "category": "universal",
       "default": ";"
+    },
+    "api-url": {
+      "name": "GD Free NONGs API URL",
+      "description": "Base HTTPS URL of your GD Free NONGs server. Leave empty until you have a server address.",
+      "type": "string",
+      "default": ""
     }
   }
 }
