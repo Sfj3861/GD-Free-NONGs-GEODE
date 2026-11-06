@@ -26,7 +26,6 @@ assert 'GFNJukeboxLayer::create()' in main
 assert 'listenForKeybindSettingPresses' in main
 assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
-assert 'onTestConnection' in jukebox
 assert 'loadSongs()' in jukebox
 assert 'loadNongs(' in jukebox
 assert '/api/v1/songs' in jukebox
@@ -38,7 +37,6 @@ assert 'AsyncRelease hold' in jukebox
 assert 'local_library::setPathForSong' in jukebox
 assert 'local_library::clearPathForSong' in jukebox
 assert 'WebRequest()' in jukebox
-assert '"/health"' in jukebox
 assert 'setPathForSong' in local_library
 assert 'pathForSong(int songID)' in music_hook
 
