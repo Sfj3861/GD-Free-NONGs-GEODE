@@ -46,6 +46,8 @@ assert 'syncWebsiteSelections' in jukebox
 assert '/api/v1/sync/' in jukebox
 assert 'RemoteSelection' in jukebox
 assert 'actualHash != item.sha256' in jukebox
+assert 'find_first_not_of("0123456789")' in jukebox
+assert 'clearPathForSong(item.songId)' in jukebox
 assert '/api/v1/selections/save' in jukebox
 assert '/api/v1/nongs/' in jukebox
 assert 'onUseOriginal' in jukebox
