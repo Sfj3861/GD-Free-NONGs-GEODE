@@ -41,6 +41,8 @@ assert 'AsyncRelease hold' in jukebox
 assert 'local_library::setPathForSong' in jukebox
 assert 'local_library::clearPathForSong' in jukebox
 assert 'WebRequest()' in jukebox
+assert 'isLocalHttp(m_baseUrl, "http://localhost")' in jukebox
+assert "boundary == ':' || boundary == '/'" in jukebox
 assert 'setPathForSong' in local_library
 assert 'pathForSong(int songID)' in music_hook
 
