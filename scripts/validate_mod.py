@@ -26,6 +26,16 @@ assert 'listenForKeybindSettingPresses' in main
 assert 'class GFNJukeboxLayer' in jukebox
 assert 'onClose' in jukebox
 assert 'onTestConnection' in jukebox
+assert 'loadSongs()' in jukebox
+assert 'loadNongs(' in jukebox
+assert '/api/v1/songs' in jukebox
+assert '/api/v1/selections/save' in jukebox
+assert '/api/v1/nongs/' in jukebox
+assert 'onUseOriginal' in jukebox
+assert 'geode::sha256' in jukebox
+assert 'AsyncRelease hold' in jukebox
+assert 'local_library::setPathForSong' in jukebox
+assert 'local_library::clearPathForSong' in jukebox
 assert 'WebRequest()' in jukebox
 assert '"/health"' in jukebox
 assert 'setPathForSong' in local_library
