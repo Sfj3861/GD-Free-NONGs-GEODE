@@ -12,7 +12,9 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 - Explicit game/loader target metadata for Windows and Android.
 - Main-menu initialization hook and master enable setting.
 - Configurable universal Jukebox keybind (default `;`, corresponding to the physical Ñ position on a Spanish keyboard; rebind it on other layouts).
-- Initial in-game Jukebox layer with title, API connection test, and close control.
+- In-game Jukebox catalogue: loads community songs and approved NONG versions from the backend.
+- NONG selection saves the chosen version for the installation, downloads the audio into the mod's private save directory, checks its SHA-256 digest, and registers the local file for the game's song resolver.
+- A “Use original song” action clears the local replacement and saves the original selection.
 - Configurable API base URL in mod settings; the Jukebox can asynchronously test the server `/health` endpoint. Remote servers must use HTTPS; HTTP is accepted only for localhost development.
 - Keybind listener opens the Jukebox layer in the running scene, suppresses key-repeat, and checks the master switch.
 - Persistent per-song local path registry.
@@ -20,7 +22,7 @@ The in-game product name is **GD Free NONGs**. “GEODE” appears only in this 
 
 ## What is not implemented yet
 
-The current Jukebox is an early interface. It can test connectivity to a configured API server, but it does not yet list community songs, search, upload, select or download NONGs. The mod is not yet connected to the backend, and there is no device pairing or authorization flow. The local path resolver has not been compiled or runtime-tested, so actual song replacement is not verified.
+The Jukebox now has an initial catalogue → approved NONG list → selection/download flow. It currently shows up to seven entries per list and has no pagination, search, upload UI, or secure device pairing. The device identifier is a local installation identifier, not authentication. The C++ mod has not yet been compiled or runtime-tested; successful download and checksum code do not prove that the Geode hook replaces audio correctly.
 
 ## Build
 
