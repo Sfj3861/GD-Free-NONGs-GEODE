@@ -188,6 +188,14 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             item->setPosition({ 0.f, 105.f - static_cast<float>(i) * thirtyFive() });
             m_menu->addChild(item);
         }
+        auto originalLabel = cocos2d::CCLabelTTF::create("Use original song", "bigFont.fnt", 0.38f);
+        auto original = originalLabel ? cocos2d::CCMenuItemLabel::create(
+            originalLabel, this, menu_selector(GFNJukeboxLayer::onUseOriginal)
+        ) : nullptr;
+        if (original) {
+            original->setPosition({ 0.f, -120.f });
+            m_menu->addChild(original);
+        }
         auto backLabel = cocos2d::CCLabelTTF::create("Back to songs", "bigFont.fnt", 0.38f);
         auto back = backLabel ? cocos2d::CCMenuItemLabel::create(
             backLabel, this, menu_selector(GFNJukeboxLayer::onBackToSongs)
