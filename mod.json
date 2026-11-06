@@ -6,20 +6,23 @@
   },
   "id": "sfj3861.gdfreenongs",
   "name": "GD Free NONGs",
-  "version": "v0.1.0",
+  "version": "v0.1.1",
   "developer": "Sfj3861",
   "description": "Manage alternative Geometry Dash song versions with the GD Free NONGs community library.",
-  "tags": [
-    "music",
-    "utility",
-    "enhancement"
-  ],
+  "tags": ["music", "utility", "enhancement"],
   "settings": {
     "enabled": {
       "name": "Enable GD Free NONGs",
       "description": "Master switch for the mod.",
       "type": "bool",
       "default": true
+    },
+    "open-jukebox": {
+      "name": "Open GD Free NONGs panel",
+      "description": "Default: the physical Ñ key on a Spanish keyboard (the key immediately to the right of L). Rebind it for other keyboard layouts.",
+      "type": "keybind",
+      "category": "universal",
+      "default": ";"
     }
   }
 }
