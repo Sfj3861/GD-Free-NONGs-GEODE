@@ -8,7 +8,7 @@
 using namespace geode::prelude;
 
 $on_mod(Loaded) {
-    log::info("GD Free NONGs v0.1.1 loaded.");
+    log::info("GD Free NONGs v0.2.0 loaded.");
 }
 
 $on_game(Loaded) {
