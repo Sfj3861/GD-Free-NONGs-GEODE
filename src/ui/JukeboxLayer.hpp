@@ -7,6 +7,7 @@
 #include <chrono>
 #include <algorithm>
 #include <random>
+#include <span>
 #include <string>
 #include <vector>
 
@@ -248,7 +249,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                         }
                         auto mod = geode::Mod::get();
                         if (!mod) return;
-                        auto actualHash = geode::sha256(audio.data()).toString();
+                        auto actualHash = geode::sha256(std::span<uint8_t const>(audio.data().data(), audio.data().size())).toString();
                         if (actualHash != entry.sha256) {
                             setStatus("Download rejected: SHA-256 checksum mismatch.");
                             return;
