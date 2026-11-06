@@ -3,6 +3,8 @@
 #include <Geode/loader/SettingV3.hpp>
 #include <Geode/modify/MenuLayer.hpp>
 
+#include "ui/JukeboxLayer.hpp"
+
 using namespace geode::prelude;
 
 $on_mod(Loaded) {
@@ -22,9 +24,22 @@ $on_game(Loaded) {
                 return;
             }
 
-            // The hotkey is registered and configurable. The in-game Jukebox
-            // layer will be connected here in the next implementation step.
-            log::info("GD Free NONGs Jukebox hotkey pressed.");
+            auto scene = CCDirector::sharedDirector()->getRunningScene();
+            if (!scene) {
+                log::warn("Cannot open GD Free NONGs: no running scene.");
+                return;
+            }
+
+            if (scene->getChildByTag(0x47464E)) {
+                return;
+            }
+
+            auto jukebox = GFNJukeboxLayer::create();
+            if (jukebox) {
+                jukebox->setTag(0x47464E);
+                scene->addChild(jukebox, 1000);
+                log::info("GD Free NONGs Jukebox opened.");
+            }
         }
     );
 }
