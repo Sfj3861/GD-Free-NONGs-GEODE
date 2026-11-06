@@ -2,8 +2,11 @@
 
 #include <Geode/Geode.hpp>
 #include <Geode/utils/web.hpp>
+#include <Geode/utils/crypto.hpp>
 #include "../core/LocalLibrary.hpp"
 #include <chrono>
+#include <algorithm>
+#include <random>
 #include <string>
 #include <vector>
 
@@ -124,7 +127,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     auto id = row["gd_song_id"].asString().unwrapOr("");
                     auto name = row["name"].asString().unwrapOr("Unknown song");
                     auto count = row["nongs"].asInt().unwrapOr(0);
-                    if (!id.empty()) m_songs.push_back({ id, name, count });
+                    if (!id.empty() && id.find_first_not_of("0123456789") == std::string::npos) m_songs.push_back({ id, name, count });
                 }
                 showSongs();
             }
@@ -227,6 +230,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                         }
                         auto mod = geode::Mod::get();
                         if (!mod) return;
+                        auto actualHash = geode::sha256(audio.data()).toString();
+                        if (actualHash != entry.sha256) {
+                            setStatus("Download rejected: SHA-256 checksum mismatch.");
+                            return;
+                        }
                         auto filename = fmt::format("song-{}.{}", m_currentSongId, entry.format);
                         auto target = mod->getSaveDir() / filename;
                         auto written = audio.into(target);
