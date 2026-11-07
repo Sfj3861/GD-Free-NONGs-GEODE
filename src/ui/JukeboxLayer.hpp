@@ -744,8 +744,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                         }
                         gfn::local_library::setPathForSong(numericSongId, target.string());
                         m_retryEntry.reset();
-                        setStatus("NONG installed and selected for this song!");
                         showNongs();
+                        setStatus("NONG installed and selected for this song!");
                     }
                 );
             }
