@@ -752,9 +752,9 @@ public:
         ) : nullptr;
         auto controls = cocos2d::CCMenu::create();
         if (controls) {
-            if (library) { library->setPosition({ -200.f, 0.f }); controls->addChild(library); }
+            if (library) { library->setPosition({ -150.f, 0.f }); controls->addChild(library); }
             if (refresh) {
-                refresh->setPosition({ -100.f, 0.f });
+                refresh->setPosition({ -75.f, 0.f });
                 controls->addChild(refresh);
             }
             if (pair) {
@@ -762,14 +762,15 @@ public:
                 controls->addChild(pair);
             }
             if (sync) {
-                sync->setPosition({ 100.f, 0.f });
+                sync->setPosition({ 75.f, 0.f });
                 controls->addChild(sync);
             }
             if (close) {
-                close->setPosition({ 200.f, 0.f });
+                close->setPosition({ 150.f, 0.f });
                 controls->addChild(close);
             }
             controls->setPosition({ size.width / 2, size.height * 0.12f });
+            controls->setScale(0.8f);
             this->addChild(controls, 3);
         }
         this->setTouchEnabled(true);
