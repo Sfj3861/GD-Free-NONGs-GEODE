@@ -33,6 +33,31 @@ namespace gfn::local_library {
                 // Ignore malformed legacy index entries.
             }
         }
+
+        // Recover older installations by matching registered song files.
+        std::error_code scanError;
+        const auto saveDir = mod->getSaveDir().string();
+        for (std::filesystem::directory_iterator it(saveDir, scanError), end;
+             !scanError && it != end; it.increment(scanError)) {
+            const auto filename = it->path().filename().string();
+            if (filename.rfind("song-", 0) != 0) continue;
+            const auto dot = filename.find('.', 5);
+            if (dot == std::string::npos) continue;
+            try {
+                const auto idText = filename.substr(5, dot - 5);
+                size_t consumed = 0;
+                const int id = std::stoi(idText, &consumed);
+                if (consumed != idText.size() || id <= 0) continue;
+                const auto registered = mod->getSavedValue<std::string>(keyForSong(id), "");
+                if (!registered.empty() &&
+                    std::filesystem::path(registered).filename() == it->path().filename() &&
+                    std::find(ids.begin(), ids.end(), id) == ids.end()) {
+                    ids.push_back(id);
+                }
+            } catch (...) {
+                // Ignore unrelated or malformed files in the mod save folder.
+            }
+        }
         return ids;
     }
 
