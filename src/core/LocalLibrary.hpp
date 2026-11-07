@@ -59,6 +59,8 @@ namespace gfn::local_library {
                 // Ignore unrelated or malformed files in the mod save folder.
             }
         }
+        // Keep the library order stable across filesystem enumeration and reloads.
+        std::sort(ids.begin(), ids.end());
         return ids;
     }
 
