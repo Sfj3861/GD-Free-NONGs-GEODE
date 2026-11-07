@@ -77,16 +77,7 @@ namespace gfn::local_library {
     inline std::string pathForSong(int songID) {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return {};
-        auto path = mod->getSavedValue<std::string>(keyForSong(songID), "");
-        // Migrate replacements saved by older mod versions into the index.
-        if (!path.empty()) {
-            auto ids = installedSongIDs();
-            if (std::find(ids.begin(), ids.end(), songID) == ids.end()) {
-                ids.push_back(songID);
-                saveInstalledSongIDs(ids);
-            }
-        }
-        return path;
+        return mod->getSavedValue<std::string>(keyForSong(songID), "");
     }
 
     inline uintmax_t fileSizeForSong(int songID) {
