@@ -52,7 +52,16 @@ namespace gfn::local_library {
     inline std::string pathForSong(int songID) {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return {};
-        return mod->getSavedValue<std::string>(keyForSong(songID), "");
+        auto path = mod->getSavedValue<std::string>(keyForSong(songID), "");
+        // Migrate replacements saved by older mod versions into the index.
+        if (!path.empty()) {
+            auto ids = installedSongIDs();
+            if (std::find(ids.begin(), ids.end(), songID) == ids.end()) {
+                ids.push_back(songID);
+                saveInstalledSongIDs(ids);
+            }
+        }
+        return path;
     }
 
     inline uintmax_t fileSizeForSong(int songID) {
@@ -72,6 +81,31 @@ namespace gfn::local_library {
             ids.push_back(songID);
             saveInstalledSongIDs(ids);
         }
+    }
+
+    inline bool deleteManagedFileForSong(int songID) {
+        auto mod = geode::Mod::get();
+        if (!mod || songID <= 0) return false;
+        const auto rawPath = pathForSong(songID);
+        if (rawPath.empty()) return false;
+
+        std::error_code error;
+        const auto saveDir = std::filesystem::canonical(mod->getSaveDir(), error);
+        if (error) return false;
+        const auto file = std::filesystem::canonical(rawPath, error);
+        if (error || file.parent_path() != saveDir) return false;
+
+        const auto expectedPrefix = fmt::format("song-{}.", songID);
+        const auto filename = file.filename().string();
+        if (filename.rfind(expectedPrefix, 0) != 0) return false;
+        const auto extension = file.extension().string();
+        if (extension != ".mp3" && extension != ".ogg" && extension != ".wav" &&
+            extension != ".flac" && extension != ".m4a") return false;
+
+        const bool removed = std::filesystem::remove(file, error);
+        if (error || !removed) return false;
+        clearPathForSong(songID);
+        return true;
     }
 
     inline void clearPathForSong(int songID) {
