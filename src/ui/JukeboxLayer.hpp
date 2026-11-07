@@ -6,6 +6,7 @@
 #include <Geode/ui/TextInput.hpp>
 #include "../core/LocalLibrary.hpp"
 #include <chrono>
+#include <cstring>
 #include <algorithm>
 #include <memory>
 #include <utility>
@@ -50,6 +51,33 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     geode::TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelTTF* m_status = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
+
+    static bool validAudioPayload(std::string_view format, std::span<uint8_t const> bytes) {
+        constexpr size_t MAX_AUDIO_BYTES = 30u * 1024u * 1024u;
+        if (bytes.empty() || bytes.size() > MAX_AUDIO_BYTES) return false;
+
+        if (format == "mp3") {
+            const bool id3 = bytes.size() >= 3 && std::memcmp(bytes.data(), "ID3", 3) == 0;
+            const bool frame = bytes.size() >= 2 && bytes[0] == 0xFF &&
+                (bytes[1] & 0xE0) == 0xE0;
+            return id3 || frame;
+        }
+        if (format == "ogg") {
+            return bytes.size() >= 4 && std::memcmp(bytes.data(), "OggS", 4) == 0;
+        }
+        if (format == "wav") {
+            return bytes.size() >= 12 &&
+                std::memcmp(bytes.data(), "RIFF", 4) == 0 &&
+                std::memcmp(bytes.data() + 8, "WAVE", 4) == 0;
+        }
+        if (format == "flac") {
+            return bytes.size() >= 4 && std::memcmp(bytes.data(), "fLaC", 4) == 0;
+        }
+        if (format == "m4a") {
+            return bytes.size() >= 8 && std::memcmp(bytes.data() + 4, "ftyp", 4) == 0;
+        }
+        return false;
+    }
 
     void setStatus(std::string const& value) {
         if (m_status) {
@@ -378,9 +406,14 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     return;
                 }
 
-                auto actualHash = geode::sha256(
-                    std::span<uint8_t const>(audio.data().data(), audio.data().size())
-                ).toString();
+                auto audioBytes = std::span<uint8_t const>(
+                    audio.data().data(), audio.data().size()
+                );
+                if (!validAudioPayload(item.format, audioBytes)) {
+                    syncNext(entries, index + 1, installed, cleared, failed + 1);
+                    return;
+                }
+                auto actualHash = geode::sha256(audioBytes).toString();
                 if (actualHash != item.sha256) {
                     syncNext(entries, index + 1, installed, cleared, failed + 1);
                     return;
@@ -478,7 +511,14 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
                     return;
                 }
-                auto actualHash = geode::sha256(std::span<uint8_t const>(audio.data().data(), audio.data().size())).toString();
+                auto audioBytes = std::span<uint8_t const>(
+                    audio.data().data(), audio.data().size()
+                );
+                if (!validAudioPayload(entry.format, audioBytes)) {
+                    setStatus("Download rejected: invalid audio container or file exceeds 30 MiB.");
+                    return;
+                }
+                auto actualHash = geode::sha256(audioBytes).toString();
                 if (actualHash != entry.sha256) {
                     setStatus("Download rejected: SHA-256 checksum mismatch.");
                     return;
