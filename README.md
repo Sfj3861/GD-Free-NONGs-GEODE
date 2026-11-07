@@ -8,9 +8,9 @@ A fully local Geometry Dash mod for managing alternative song files. The mod doe
 
 1. Use the companion browser app in the [GD Free NONGs repository](https://github.com/Sfj3861/GD-Free-NONGs) to import an audio file into the browser's local IndexedDB library.
 2. Select the version and choose **EXPORT FOR GEODE**. The browser saves it as song-&lt;GD_ID&gt;.&lt;extension&gt;.
-3. Copy that file into this mod's Geode save directory.
-4. Open the in-game Jukebox using the main-menu NONGs button or configured keyboard shortcut.
-5. The Jukebox scans its save directory and automatically registers matching files.
+3. Open the in-game Jukebox using the main-menu NONGs button or configured keyboard shortcut.
+4. Choose **Import audio** and select the exported file using the system file picker. It must be named `song-<GD_ID>.<extension>`.
+5. The mod checks the filename, extension, audio signature and 30 MiB size limit, then copies it into its private save directory.
 6. The song resolver redirects the matching Geometry Dash song ID to the local audio file.
 7. Use **Delete** in My NONGs to remove a managed file and return to the original game audio.
 
@@ -25,7 +25,7 @@ Supported extensions: MP3, OGG, WAV, FLAC and M4A.
 - Deletes only a matching managed audio file whose canonical parent directory is the mod's own save directory.
 - Falls back to the original Geometry Dash audio if no local replacement is registered or the file is unavailable.
 
-The browser and the game do not share storage. Exporting and copying the file is the deliberate offline bridge; no pairing or network connection is used.
+The browser and the game do not share storage. Exporting the file and importing it through Geode's system file picker is the deliberate offline bridge; no pairing or network connection is used.
 
 ## Compatibility and build
 
