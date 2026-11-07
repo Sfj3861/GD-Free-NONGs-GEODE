@@ -1,50 +1,45 @@
-# GD Free NONGs
+# GD Free NONGs — Offline Geode Mod
 
-Geometry Dash mod client for the GD Free NONGs community platform.
+A fully local Geometry Dash mod for managing alternative song files. The mod does not contact a remote API, use Cloudflare, require FastAPI, or depend on a cloud service.
 
-**Targets:** Geometry Dash 2.2091 · Geode 6.0.0-alpha.1 (experimental).
+**Targets:** Geometry Dash 2.2091 · Geode SDK 6.0.0-alpha.1.
 
-The in-game product name is **GD Free NONGs**. “GEODE” is used only for the repository and build tooling.
+## How the offline workflow works
 
-## Current implementation
+1. Use the companion browser app in the [GD Free NONGs repository](https://github.com/Sfj3861/GD-Free-NONGs) to import an audio file into the browser's local IndexedDB library.
+2. Select the version and choose **EXPORT FOR GEODE**. The browser saves it as song-&lt;GD_ID&gt;.&lt;extension&gt;.
+3. Copy that file into this mod's Geode save directory.
+4. Open the in-game Jukebox using the main-menu NONGs button or configured keyboard shortcut.
+5. The Jukebox scans its save directory and automatically registers matching files.
+6. The song resolver redirects the matching Geometry Dash song ID to the local audio file.
+7. Use **Delete** in My NONGs to remove a managed file and return to the original game audio.
 
-- Geode project metadata and CMake packaging for Windows and Android64.
-- Master enable setting and configurable API base URL.
-- Main-menu touch button for opening the Jukebox, plus the configurable keyboard shortcut.
-- Searchable catalogue of Geometry Dash song IDs, with seven songs per page and previous/next controls.
-- One-tap clearing of the in-game song ID search.
-- Approved NONG versions listed for each Geometry Dash song, with seven entries per page and previous/next navigation.
-- Download of approved audio into the mod's private save directory.
-- SHA-256 verification before any downloaded audio is registered.
-- Local song resolver hook with fallback to the original game path when no valid local file is registered.
-- Restore-original action for a song.
-- Local NONG library with installed song IDs, managed audio filenames, file sizes, and paginated navigation.
-- Restore or delete managed NONG files from the local library; deletion is restricted to matching audio files inside the mod's own save directory.
-- One-time browser/game pairing: the Jukebox requests a 16-character code that expires after 10 minutes and can only be claimed once from the web PAIR tab.
-- Pairing requests and claims are rate-limited by the API-observed client IP; production deployments behind a reverse proxy must also apply edge rate limiting.
-- **Sync website** fetches selections associated with the paired game device, downloads approved NONGs, validates their SHA-256 values, and installs local replacements. Original or unavailable selections clear the corresponding local replacement.
-- Remote API URLs must use HTTPS; HTTP is accepted only for exact localhost/127.0.0.1 development hosts.
+Supported extensions: MP3, OGG, WAV, FLAC and M4A.
 
-## Not implemented yet
+## Local library
 
-- Uploading NONG files directly from inside the game.
-- Search within the list of NONG versions for an individual song.
-- A full user-account system or multi-factor authentication; pairing is a one-time device-linking flow, not account identity verification.
-- Production hosting, persistent managed database/object storage, backups, monitoring, abuse reporting and a full rights/takedown process.
+- Detects files named song-&lt;positive song ID&gt;.&lt;supported extension&gt; in the mod save directory.
+- Stores the resolved path and a local song-ID index in Geode saved values.
+- Displays filename and file size, with seven entries per page.
+- Re-scans the folder on refresh.
+- Deletes only a matching managed audio file whose canonical parent directory is the mod's own save directory.
+- Falls back to the original Geometry Dash audio if no local replacement is registered or the file is unavailable.
 
-The API repository must be deployed and configured in the mod's **API URL** setting before online functionality can be used. No public API server is provided by this repository.
+The browser and the game do not share storage. Exporting and copying the file is the deliberate offline bridge; no pairing or network connection is used.
 
-## Build
+## Compatibility and build
 
-Install the matching Geode SDK and CLI for v6.0.0-alpha.1, set `GEODE_SDK` to the SDK directory, then:
+- Geometry Dash 2.2091 (Windows and Android)
+- Geode SDK 6.0.0-alpha.1
+- C++20
 
-```bash
+~~~bash
 cmake -S . -B build
 cmake --build build --config Release
-```
+~~~
 
-The Geode CMake integration creates the package target. Do not build against a stable SDK targeting another Geometry Dash version and relabel the result as 2.2091.
+A successful build does not replace in-game testing on both target platforms.
 
-## Compatibility and testing
+## Rights
 
-GitHub Actions has produced Windows and Android64 packages for this project. A successful CI compile verifies that the code builds against the declared SDK; it does **not** replace testing the mod inside Geometry Dash on real devices. In particular, confirm that the main-menu button is positioned correctly and that the music resolver replaces audio on Android and Windows.
+Only use audio you own or are authorized to use. A Geometry Dash or Newgrounds ID is an identifier, not permission to redistribute a track.
