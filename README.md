@@ -13,7 +13,7 @@ The in-game product name is **GD Free NONGs**. “GEODE” is used only for the 
 - Main-menu touch button for opening the Jukebox, plus the configurable keyboard shortcut.
 - Searchable catalogue of Geometry Dash song IDs, with seven songs per page and previous/next controls.
 - One-tap clearing of the in-game song ID search.
-- Approved NONG versions listed for each Geometry Dash song.
+- Approved NONG versions listed for each Geometry Dash song, with seven entries per page and previous/next navigation.
 - Download of approved audio into the mod's private save directory.
 - SHA-256 verification before any downloaded audio is registered.
 - Local song resolver hook with fallback to the original game path when no valid local file is registered.
@@ -26,7 +26,7 @@ The in-game product name is **GD Free NONGs**. “GEODE” is used only for the 
 ## Not implemented yet
 
 - Uploading NONG files directly from inside the game.
-- Pagination/search for the list of NONG versions within an individual song.
+- Search within the list of NONG versions for an individual song.
 - A full user-account system or multi-factor authentication; pairing is a one-time device-linking flow, not account identity verification.
 - Production hosting, persistent managed database/object storage, backups, monitoring, abuse reporting and a full rights/takedown process.
 
