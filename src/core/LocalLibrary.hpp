@@ -15,6 +15,11 @@ namespace gfn::local_library {
         return fmt::format("local-nong-path-{}", songID);
     }
 
+    inline bool supportedAudioExtension(std::string const& extension) {
+        return extension == ".mp3" || extension == ".ogg" || extension == ".wav" ||
+            extension == ".flac" || extension == ".m4a";
+    }
+
     inline std::vector<int> indexedSongIDs() {
         auto mod = geode::Mod::get();
         if (!mod) return {};
@@ -37,40 +42,6 @@ namespace gfn::local_library {
         return ids;
     }
 
-    inline std::vector<int> installedSongIDs() {
-        auto mod = geode::Mod::get();
-        if (!mod) return {};
-        auto ids = indexedSongIDs();
-
-        // Recover older installations by matching registered song files.
-        std::error_code scanError;
-        const auto saveDir = mod->getSaveDir().string();
-        for (std::filesystem::directory_iterator it(saveDir, scanError), end;
-             !scanError && it != end; it.increment(scanError)) {
-            const auto filename = it->path().filename().string();
-            if (filename.rfind("song-", 0) != 0) continue;
-            const auto dot = filename.find('.', 5);
-            if (dot == std::string::npos) continue;
-            try {
-                const auto idText = filename.substr(5, dot - 5);
-                size_t consumed = 0;
-                const int id = std::stoi(idText, &consumed);
-                if (consumed != idText.size() || id <= 0) continue;
-                const auto registered = mod->getSavedValue<std::string>(keyForSong(id), "");
-                if (!registered.empty() &&
-                    std::filesystem::path(registered).filename() == it->path().filename() &&
-                    std::find(ids.begin(), ids.end(), id) == ids.end()) {
-                    ids.push_back(id);
-                }
-            } catch (...) {
-                // Ignore unrelated or malformed files in the mod save folder.
-            }
-        }
-        // Keep the library order stable across filesystem enumeration and reloads.
-        std::sort(ids.begin(), ids.end());
-        return ids;
-    }
-
     inline void saveInstalledSongIDs(std::vector<int> const& ids) {
         auto mod = geode::Mod::get();
         if (!mod) return;
@@ -81,6 +52,54 @@ namespace gfn::local_library {
             raw += std::to_string(id);
         }
         mod->setSavedValue(INDEX_KEY, raw);
+    }
+
+    inline std::vector<int> installedSongIDs() {
+        auto mod = geode::Mod::get();
+        if (!mod) return {};
+        auto ids = indexedSongIDs();
+
+        // Discover exported song-ID files copied into the mod's save directory.
+        std::error_code scanError;
+        const auto saveDir = mod->getSaveDir().string();
+        for (std::filesystem::directory_iterator it(saveDir, scanError), end;
+             !scanError && it != end; it.increment(scanError)) {
+            std::error_code fileError;
+            if (!it->is_regular_file(fileError) || fileError) continue;
+            const auto filename = it->path().filename().string();
+            if (filename.rfind("song-", 0) != 0) continue;
+            const auto dot = filename.find('.', 5);
+            if (dot == std::string::npos) continue;
+            const auto extension = filename.substr(dot);
+            if (!supportedAudioExtension(extension)) continue;
+
+            try {
+                const auto idText = filename.substr(5, dot - 5);
+                size_t consumed = 0;
+                const int id = std::stoi(idText, &consumed);
+                if (consumed != idText.size() || id <= 0) continue;
+
+                const auto candidate = it->path().string();
+                const auto registered = mod->getSavedValue<std::string>(keyForSong(id), "");
+                std::error_code registeredError;
+                const bool registeredExists = !registered.empty() &&
+                    std::filesystem::is_regular_file(registered, registeredError) &&
+                    !registeredError;
+                if (!registeredExists) {
+                    mod->setSavedValue(keyForSong(id), candidate);
+                }
+                const auto activePath = mod->getSavedValue<std::string>(keyForSong(id), "");
+                if (activePath == candidate &&
+                    std::find(ids.begin(), ids.end(), id) == ids.end()) {
+                    ids.push_back(id);
+                }
+            } catch (...) {
+                // Ignore unrelated or malformed files in the mod save folder.
+            }
+        }
+        std::sort(ids.begin(), ids.end());
+        saveInstalledSongIDs(ids);
+        return ids;
     }
 
     // An empty path means the game should use its normal song file.
@@ -109,7 +128,14 @@ namespace gfn::local_library {
         }
     }
 
-    inline void clearPathForSong(int songID);
+    inline void clearPathForSong(int songID) {
+        auto mod = geode::Mod::get();
+        if (!mod || songID <= 0) return;
+        mod->setSavedValue(keyForSong(songID), std::string{});
+        auto ids = indexedSongIDs();
+        ids.erase(std::remove(ids.begin(), ids.end(), songID), ids.end());
+        saveInstalledSongIDs(ids);
+    }
 
     inline bool deleteManagedFileForSong(int songID) {
         auto mod = geode::Mod::get();
@@ -125,23 +151,12 @@ namespace gfn::local_library {
 
         const auto expectedPrefix = fmt::format("song-{}.", songID);
         const auto filename = file.filename().string();
-        if (filename.rfind(expectedPrefix, 0) != 0) return false;
-        const auto extension = file.extension().string();
-        if (extension != ".mp3" && extension != ".ogg" && extension != ".wav" &&
-            extension != ".flac" && extension != ".m4a") return false;
+        if (filename.rfind(expectedPrefix, 0) != 0 ||
+            !supportedAudioExtension(file.extension().string())) return false;
 
         const bool removed = std::filesystem::remove(file, error);
         if (error || !removed) return false;
         clearPathForSong(songID);
         return true;
-    }
-
-    inline void clearPathForSong(int songID) {
-        auto mod = geode::Mod::get();
-        if (!mod || songID <= 0) return;
-        mod->setSavedValue(keyForSong(songID), std::string{});
-        auto ids = indexedSongIDs();
-        ids.erase(std::remove(ids.begin(), ids.end(), songID), ids.end());
-        saveInstalledSongIDs(ids);
     }
 }
