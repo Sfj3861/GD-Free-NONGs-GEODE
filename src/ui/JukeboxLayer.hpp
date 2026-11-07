@@ -49,6 +49,9 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     int m_catalogPages = 0;
     int m_nongPage = 1;
     int m_nongPages = 0;
+    std::vector<int> m_librarySongIds;
+    int m_libraryPage = 1;
+    static constexpr size_t LIBRARY_PAGE_SIZE = 7;
     std::string m_searchQuery;
     geode::TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelTTF* m_status = nullptr;
@@ -357,6 +360,53 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             back->setPosition({ 0.f, -175.f });
             m_menu->addChild(back);
         }
+    }
+
+    std::string formatFileSize(uintmax_t bytes) const {
+        if (bytes < 1024) return fmt::format("{} B", bytes);
+        if (bytes < 1024 * 1024) return fmt::format("{:.1f} KiB", bytes / 1024.0);
+        return fmt::format("{:.1f} MiB", bytes / (1024.0 * 1024.0));
+    }
+
+    void showLocalLibrary() {
+        m_librarySongIds = gfn::local_library::installedSongIDs();
+        const int pageCount = std::max<int>(1, static_cast<int>((m_librarySongIds.size() + LIBRARY_PAGE_SIZE - 1) / LIBRARY_PAGE_SIZE));
+        m_libraryPage = std::clamp(m_libraryPage, 1, pageCount);
+        showMenu();
+        setStatus(m_librarySongIds.empty()
+            ? "No local NONGs are registered on this device."
+            : fmt::format("Local NONG library · {} songs · Page {} / {}", m_librarySongIds.size(), m_libraryPage, pageCount));
+
+        const size_t start = static_cast<size_t>(m_libraryPage - 1) * LIBRARY_PAGE_SIZE;
+        const size_t end = std::min(m_librarySongIds.size(), start + LIBRARY_PAGE_SIZE);
+        for (size_t i = start; i < end; ++i) {
+            const int songId = m_librarySongIds[i];
+            const auto path = gfn::local_library::pathForSong(songId);
+            const bool exists = !path.empty() && std::filesystem::exists(path);
+            const auto filename = path.empty() ? std::string("No file registered") : std::filesystem::path(path).filename().string();
+            const auto size = exists ? formatFileSize(gfn::local_library::fileSizeForSong(songId)) : std::string("Missing file");
+            auto label = cocos2d::CCLabelTTF::create(fmt::format("Song {} · {} · {}", songId, filename, size).c_str(), "bigFont.fnt", 0.34f);
+            if (!label) continue;
+            auto item = cocos2d::CCMenuItemLabel::create(label, this, menu_selector(GFNJukeboxLayer::onRestoreLocalSong));
+            if (!item) continue;
+            item->setTag(songId);
+            item->setPosition({ 0.f, 105.f - static_cast<float>(i - start) * thirtyFive() });
+            m_menu->addChild(item);
+        }
+
+        if (m_libraryPage > 1) {
+            auto label = cocos2d::CCLabelTTF::create("← Previous", "bigFont.fnt", 0.32f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(label, this, menu_selector(GFNJukeboxLayer::onPreviousLibraryPage)) : nullptr;
+            if (button) { button->setPosition({ -85.f, -145.f }); m_menu->addChild(button); }
+        }
+        if (m_libraryPage < pageCount) {
+            auto label = cocos2d::CCLabelTTF::create("Next →", "bigFont.fnt", 0.32f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(label, this, menu_selector(GFNJukeboxLayer::onNextLibraryPage)) : nullptr;
+            if (button) { button->setPosition({ 85.f, -145.f }); m_menu->addChild(button); }
+        }
+        auto backLabel = cocos2d::CCLabelTTF::create("Back to catalogue", "bigFont.fnt", 0.36f);
+        auto back = backLabel ? cocos2d::CCMenuItemLabel::create(backLabel, this, menu_selector(GFNJukeboxLayer::onBackFromLibrary)) : nullptr;
+        if (back) { back->setPosition({ 0.f, -175.f }); m_menu->addChild(back); }
     }
 
     void requestPairingCode() {
@@ -671,6 +721,8 @@ public:
             this->addChild(searchMenu, 4);
         }
 
+        auto libraryLabel = cocos2d::CCLabelTTF::create("My NONGs", "bigFont.fnt", 0.34f);
+        auto library = libraryLabel ? cocos2d::CCMenuItemLabel::create(libraryLabel, this, menu_selector(GFNJukeboxLayer::onOpenLocalLibrary)) : nullptr;
         auto refreshLabel = cocos2d::CCLabelTTF::create("Refresh", "bigFont.fnt", 0.38f);
         auto refresh = refreshLabel ? cocos2d::CCMenuItemLabel::create(
             refreshLabel, this, menu_selector(GFNJukeboxLayer::onRefresh)
@@ -689,20 +741,21 @@ public:
         ) : nullptr;
         auto controls = cocos2d::CCMenu::create();
         if (controls) {
+            if (library) { library->setPosition({ -200.f, 0.f }); controls->addChild(library); }
             if (refresh) {
-                refresh->setPosition({ -150.f, 0.f });
+                refresh->setPosition({ -100.f, 0.f });
                 controls->addChild(refresh);
             }
             if (pair) {
-                pair->setPosition({ -50.f, 0.f });
+                pair->setPosition({ 0.f, 0.f });
                 controls->addChild(pair);
             }
             if (sync) {
-                sync->setPosition({ 55.f, 0.f });
+                sync->setPosition({ 100.f, 0.f });
                 controls->addChild(sync);
             }
             if (close) {
-                close->setPosition({ 150.f, 0.f });
+                close->setPosition({ 200.f, 0.f });
                 controls->addChild(close);
             }
             controls->setPosition({ size.width / 2, size.height * 0.12f });
@@ -713,6 +766,23 @@ public:
     }
 
     void onRefresh(cocos2d::CCObject*) { loadSongs(1); }
+
+    void onOpenLocalLibrary(cocos2d::CCObject*) { m_libraryPage = 1; showLocalLibrary(); }
+    void onPreviousLibraryPage(cocos2d::CCObject*) { if (m_libraryPage > 1) { --m_libraryPage; showLocalLibrary(); } }
+    void onNextLibraryPage(cocos2d::CCObject*) {
+        const auto ids = gfn::local_library::installedSongIDs();
+        const int pages = std::max<int>(1, static_cast<int>((ids.size() + LIBRARY_PAGE_SIZE - 1) / LIBRARY_PAGE_SIZE));
+        if (m_libraryPage < pages) { ++m_libraryPage; showLocalLibrary(); }
+    }
+    void onRestoreLocalSong(cocos2d::CCObject* sender) {
+        auto item = static_cast<cocos2d::CCMenuItem*>(sender);
+        const int songId = item ? item->getTag() : 0;
+        if (songId <= 0) return;
+        gfn::local_library::clearPathForSong(songId);
+        setStatus(fmt::format("Original song {} restored.", songId));
+        showLocalLibrary();
+    }
+    void onBackFromLibrary(cocos2d::CCObject*) { showSongs(); }
 
     void onPairWebsite(cocos2d::CCObject*) { requestPairingCode(); }
 
