@@ -382,7 +382,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         for (size_t i = start; i < end; ++i) {
             const int songId = m_librarySongIds[i];
             const auto path = gfn::local_library::pathForSong(songId);
-            const bool exists = !path.empty() && std::filesystem::exists(path);
+            std::error_code fileError;
+            const bool exists = !path.empty() && std::filesystem::exists(path, fileError) && !fileError;
             const auto filename = path.empty() ? std::string("No file registered") : std::filesystem::path(path).filename().string();
             const auto size = exists ? formatFileSize(gfn::local_library::fileSizeForSong(songId)) : std::string("Missing file");
             auto label = cocos2d::CCLabelTTF::create(fmt::format("Song {} · {} · {}", songId, filename, size).c_str(), "bigFont.fnt", 0.34f);
