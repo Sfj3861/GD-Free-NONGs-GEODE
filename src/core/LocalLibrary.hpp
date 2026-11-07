@@ -115,7 +115,7 @@ namespace gfn::local_library {
         if (rawPath.empty()) return false;
 
         std::error_code error;
-        const auto saveDir = std::filesystem::canonical(mod->getSaveDir(), error);
+        const auto saveDir = std::filesystem::canonical(mod->getSaveDir().string(), error);
         if (error) return false;
         const auto file = std::filesystem::canonical(rawPath, error);
         if (error || file.parent_path() != saveDir) return false;
