@@ -1,14 +1,19 @@
 #pragma once
 
 #include <Geode/Geode.hpp>
+#include <Geode/utils/file.hpp>
 #include "../core/LocalLibrary.hpp"
 #include <algorithm>
+#include <cstdint>
+#include <cstring>
+#include <span>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     static constexpr size_t PAGE_SIZE = 7;
+    struct AsyncRelease { GFNJukeboxLayer* layer; ~AsyncRelease() { layer->release(); } };
     int m_page = 1;
     std::vector<int> m_songIds;
     cocos2d::CCLabelTTF* m_status = nullptr;
@@ -35,6 +40,21 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         m_menu->addChild(item);
     }
 
+    static bool validAudioPayload(std::string const& extension, std::span<uint8_t const> bytes) {
+        constexpr size_t MAX_AUDIO_BYTES = 30u * 1024u * 1024u;
+        if (bytes.empty() || bytes.size() > MAX_AUDIO_BYTES) return false;
+        if (extension == "mp3") {
+            return (bytes.size() >= 3 && std::memcmp(bytes.data(), "ID3", 3) == 0) ||
+                (bytes.size() >= 2 && bytes[0] == 0xFF && (bytes[1] & 0xE0) == 0xE0);
+        }
+        if (extension == "ogg") return bytes.size() >= 4 && std::memcmp(bytes.data(), "OggS", 4) == 0;
+        if (extension == "wav") return bytes.size() >= 12 &&
+            std::memcmp(bytes.data(), "RIFF", 4) == 0 && std::memcmp(bytes.data() + 8, "WAVE", 4) == 0;
+        if (extension == "flac") return bytes.size() >= 4 && std::memcmp(bytes.data(), "fLaC", 4) == 0;
+        if (extension == "m4a") return bytes.size() >= 8 && std::memcmp(bytes.data() + 4, "ftyp", 4) == 0;
+        return false;
+    }
+
     void showLibrary() {
         m_songIds = gfn::local_library::installedSongIDs();
         const int pages = std::max<int>(1, static_cast<int>((m_songIds.size() + PAGE_SIZE - 1) / PAGE_SIZE));
@@ -48,7 +68,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         this->addChild(m_menu, 2);
 
         if (m_songIds.empty()) {
-            setStatus("No local NONGs found. Copy song-ID.mp3/ogg/wav/flac/m4a into the mod save folder.");
+            setStatus("No local NONGs yet. Import a file named song-ID.mp3/ogg/wav/flac/m4a.");
         } else {
             setStatus(fmt::format("Local NONG library · {} songs · Page {} / {}",
                 m_songIds.size(), m_page, pages));
@@ -88,9 +108,11 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             menu_selector(GFNJukeboxLayer::onPrevious));
         if (m_page < pages) addButton("Next >", { 85.f, -145.f },
             menu_selector(GFNJukeboxLayer::onNext));
-        addButton("Refresh library", { 0.f, -175.f },
+        addButton("Import audio", { 0.f, -175.f },
+            menu_selector(GFNJukeboxLayer::onImportAudio));
+        addButton("Refresh library", { 0.f, -205.f },
             menu_selector(GFNJukeboxLayer::onRefresh));
-        addButton("Close", { 0.f, -205.f },
+        addButton("Close", { 0.f, -235.f },
             menu_selector(GFNJukeboxLayer::onClose));
     }
 
@@ -121,6 +143,101 @@ public:
         }
         showLibrary();
         return true;
+    }
+
+    void onImportAudio(cocos2d::CCObject*) {
+        setStatus("Choose a NONG named song-<GD song ID>.<format>.");
+        geode::utils::file::FilePickOptions options {
+            .filters = { geode::utils::file::FilePickOptions::Filter {
+                .description = "NONG audio files",
+                .files = { "*.mp3", "*.ogg", "*.wav", "*.flac", "*.m4a" },
+            }}
+        };
+        this->retain();
+        geode::async::spawn(
+            geode::utils::file::pick(
+                geode::utils::file::PickMode::OpenFile,
+                std::move(options)
+            ),
+            [this](geode::utils::file::PickResult result) {
+                AsyncRelease hold{ this };
+                if (!this->getParent()) return;
+                if (!result.isOk()) {
+                    setStatus(fmt::format("File picker failed: {}", result.unwrapErr()));
+                    return;
+                }
+                auto selected = std::move(result).unwrap();
+                if (!selected.has_value()) {
+                    setStatus("Import cancelled.");
+                    return;
+                }
+
+                const auto source = selected.value();
+                const auto filename = std::filesystem::path(source.string()).filename().string();
+                if (filename.rfind("song-", 0) != 0) {
+                    setStatus("Invalid filename. Expected song-<GD song ID>.<format>.");
+                    return;
+                }
+                const auto dot = filename.find('.', 5);
+                if (dot == std::string::npos) {
+                    setStatus("Invalid filename. The song ID and audio extension are required.");
+                    return;
+                }
+
+                int songId = 0;
+                try {
+                    const auto idText = filename.substr(5, dot - 5);
+                    size_t consumed = 0;
+                    songId = std::stoi(idText, &consumed);
+                    if (consumed != idText.size() || songId <= 0) songId = 0;
+                } catch (...) {
+                    songId = 0;
+                }
+                if (songId <= 0) {
+                    setStatus("Invalid Geometry Dash song ID in filename.");
+                    return;
+                }
+
+                auto extension = filename.substr(dot + 1);
+                std::transform(extension.begin(), extension.end(), extension.begin(),
+                    [](unsigned char ch) { return static_cast<char>(std::tolower(ch)); });
+                if (extension != "mp3" && extension != "ogg" && extension != "wav" &&
+                    extension != "flac" && extension != "m4a") {
+                    setStatus("Unsupported audio format.");
+                    return;
+                }
+
+                auto data = geode::utils::file::readBinary(source);
+                if (!data.isOk()) {
+                    setStatus(fmt::format("Could not read audio file: {}", data.unwrapErr()));
+                    return;
+                }
+                auto bytes = std::move(data).unwrap();
+                std::span<uint8_t const> view(bytes.data(), bytes.size());
+                if (!validAudioPayload(extension, view)) {
+                    setStatus("Invalid audio file or file exceeds 30 MiB.");
+                    return;
+                }
+
+                auto mod = geode::Mod::get();
+                if (!mod) {
+                    setStatus("Could not access the Geode mod data directory.");
+                    return;
+                }
+                const auto targetName = fmt::format("song-{}.{}", songId, extension);
+                const auto target = mod->getSaveDir() / targetName;
+                auto written = geode::utils::file::writeBinarySafe(target, view);
+                if (!written.isOk()) {
+                    setStatus(fmt::format("Could not save local NONG: {}", written.unwrapErr()));
+                    return;
+                }
+
+                gfn::local_library::setPathForSong(songId, target.string());
+                m_page = 1;
+                showLibrary();
+                setStatus(fmt::format("Imported and activated local NONG for GD song {}.", songId));
+            }
+        );
     }
 
     void onRefresh(cocos2d::CCObject*) {
