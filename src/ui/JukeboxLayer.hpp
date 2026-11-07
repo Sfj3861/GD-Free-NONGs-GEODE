@@ -47,6 +47,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     std::vector<NongEntry> m_nongs;
     int m_catalogPage = 1;
     int m_catalogPages = 0;
+    int m_nongPage = 1;
+    int m_nongPages = 0;
     std::string m_searchQuery;
     geode::TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelTTF* m_status = nullptr;
@@ -249,11 +251,15 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         );
     }
 
-    void loadNongs(std::string songId) {
+    void loadNongs(std::string songId, int page = 1) {
         m_currentSongId = std::move(songId);
+        m_nongPage = std::max(page, 1);
         setStatus("Loading available NONGs...");
         showMenu();
-        auto url = m_baseUrl + "/api/v1/songs/" + m_currentSongId + "/nongs";
+        auto url = fmt::format(
+            "{}/api/v1/songs/{}/nongs?page={}&limit=7",
+            m_baseUrl, m_currentSongId, m_nongPage
+        );
         this->retain();
         geode::async::spawn(
             geode::utils::web::WebRequest().timeout(std::chrono::seconds(15)).get(url),
@@ -265,12 +271,19 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                     return;
                 }
                 auto parsed = response.json();
-                if (!parsed || !parsed.unwrap().isArray()) {
-                    setStatus("The server returned an invalid NONG list.");
+                if (!parsed || !parsed.unwrap().isObject() ||
+                    !parsed.unwrap()["items"].isArray() ||
+                    !parsed.unwrap()["pagination"].isObject()) {
+                    setStatus("The server returned an invalid paginated NONG list.");
                     return;
                 }
+                auto const& data = parsed.unwrap();
+                auto rawPage = data["pagination"]["page"].asInt().unwrapOr(1);
+                auto rawPages = data["pagination"]["pages"].asInt().unwrapOr(0);
+                m_nongPage = static_cast<int>(std::clamp<int64_t>(rawPage, 1, 1000000));
+                m_nongPages = static_cast<int>(std::clamp<int64_t>(rawPages, 0, 1000000));
                 m_nongs.clear();
-                for (auto const& row : parsed.unwrap()) {
+                for (auto const& row : data["items"]) {
                     NongEntry entry;
                     entry.id = row["id"].asInt().unwrapOr(0);
                     entry.name = row["display_name"].asString().unwrapOr("Community version");
@@ -292,7 +305,10 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             setStatus("No approved NONGs for this song yet.");
             return;
         }
-        setStatus("Choose a community version:");
+        setStatus(fmt::format(
+            "Choose a community version · Page {} / {}",
+            m_nongPage, std::max(m_nongPages, 1)
+        ));
         auto count = std::min<size_t>(m_nongs.size(), 7);
         for (size_t i = 0; i < count; ++i) {
             auto label = cocos2d::CCLabelTTF::create(m_nongs[i].name.c_str(), "bigFont.fnt", 0.42f);
@@ -305,12 +321,32 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             item->setPosition({ 0.f, 105.f - static_cast<float>(i) * thirtyFive() });
             m_menu->addChild(item);
         }
+        if (m_nongPage > 1) {
+            auto label = cocos2d::CCLabelTTF::create("← Previous", "bigFont.fnt", 0.32f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(
+                label, this, menu_selector(GFNJukeboxLayer::onPreviousNongPage)
+            ) : nullptr;
+            if (button) {
+                button->setPosition({ -85.f, -125.f });
+                m_menu->addChild(button);
+            }
+        }
+        if (m_nongPage < m_nongPages) {
+            auto label = cocos2d::CCLabelTTF::create("Next →", "bigFont.fnt", 0.32f);
+            auto button = label ? cocos2d::CCMenuItemLabel::create(
+                label, this, menu_selector(GFNJukeboxLayer::onNextNongPage)
+            ) : nullptr;
+            if (button) {
+                button->setPosition({ 85.f, -125.f });
+                m_menu->addChild(button);
+            }
+        }
         auto originalLabel = cocos2d::CCLabelTTF::create("Use original song", "bigFont.fnt", 0.38f);
         auto original = originalLabel ? cocos2d::CCMenuItemLabel::create(
             originalLabel, this, menu_selector(GFNJukeboxLayer::onUseOriginal)
         ) : nullptr;
         if (original) {
-            original->setPosition({ 0.f, -120.f });
+            original->setPosition({ 0.f, -150.f });
             m_menu->addChild(original);
         }
         auto backLabel = cocos2d::CCLabelTTF::create("Back to songs", "bigFont.fnt", 0.38f);
@@ -318,7 +354,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             backLabel, this, menu_selector(GFNJukeboxLayer::onBackToSongs)
         ) : nullptr;
         if (back) {
-            back->setPosition({ 0.f, -145.f });
+            back->setPosition({ 0.f, -175.f });
             m_menu->addChild(back);
         }
     }
@@ -704,6 +740,14 @@ public:
 
     void onNextPage(cocos2d::CCObject*) {
         if (m_catalogPage < m_catalogPages) loadSongs(m_catalogPage + 1);
+    }
+
+    void onPreviousNongPage(cocos2d::CCObject*) {
+        if (m_nongPage > 1) loadNongs(m_currentSongId, m_nongPage - 1);
+    }
+
+    void onNextNongPage(cocos2d::CCObject*) {
+        if (m_nongPage < m_nongPages) loadNongs(m_currentSongId, m_nongPage + 1);
     }
 
     void onSongSelected(cocos2d::CCObject* sender) {
