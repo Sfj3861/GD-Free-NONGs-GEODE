@@ -46,6 +46,9 @@ assert 'syncWebsiteSelections' in jukebox
 assert '/api/v1/sync/' in jukebox
 assert 'RemoteSelection' in jukebox
 assert 'actualHash != item.sha256' in jukebox
+assert 'validAudioPayload' in jukebox
+assert 'MAX_AUDIO_BYTES = 30u * 1024u * 1024u' in jukebox
+assert 'invalid audio container or file exceeds 30 MiB' in jukebox
 assert 'find_first_not_of("0123456789")' in jukebox
 assert 'clearPathForSong(item.songId)' in jukebox
 assert '/api/v1/selections/save' in jukebox
