@@ -102,6 +102,8 @@ namespace gfn::local_library {
         }
     }
 
+    inline void clearPathForSong(int songID);
+
     inline bool deleteManagedFileForSong(int songID) {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return false;
@@ -130,7 +132,7 @@ namespace gfn::local_library {
     inline void clearPathForSong(int songID) {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return;
-        mod->setSavedValue(keyForSong(songID), "");
+        mod->setSavedValue(keyForSong(songID), std::string{});
         auto ids = installedSongIDs();
         ids.erase(std::remove(ids.begin(), ids.end(), songID), ids.end());
         saveInstalledSongIDs(ids);
