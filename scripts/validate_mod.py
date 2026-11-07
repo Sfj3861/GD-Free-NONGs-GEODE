@@ -2,67 +2,46 @@ import json
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
-metadata = json.loads((root / 'mod.json').read_text(encoding='utf-8'))
+metadata = json.loads((root / "mod.json").read_text(encoding="utf-8"))
 
-assert metadata['name'] == 'GD Free NONGs', 'The in-game name must not include GEODE'
-assert metadata['geode'] == '6.0.0-alpha.1', 'Use the canonical SDK version without a leading v'
-assert metadata['gd']['win'] == '2.2091'
-assert metadata['gd']['android'] == '2.2091'
-assert metadata['id'] == 'sfj3861.gdfreenongs'
-assert metadata['version'] == 'v0.2.0'
-assert metadata['settings']['open-jukebox']['type'] == 'keybind'
-assert metadata['settings']['open-jukebox']['default'] == ';'
-assert metadata['settings']['enabled']['default'] is True
-assert metadata['settings']['api-url']['type'] == 'string'
-assert metadata['settings']['api-url']['default'] == ''
+assert metadata["name"] == "GD Free NONGs"
+assert metadata["geode"] == "6.0.0-alpha.1"
+assert metadata["gd"]["win"] == "2.2091"
+assert metadata["gd"]["android"] == "2.2091"
+assert metadata["id"] == "sfj3861.gdfreenongs"
+assert metadata["version"] == "v0.3.0"
+assert metadata["settings"]["open-jukebox"]["type"] == "keybind"
+assert metadata["settings"]["enabled"]["default"] is True
+assert "api-url" not in metadata["settings"]
 
-main = (root / 'src/main.cpp').read_text(encoding='utf-8')
-jukebox = (root / 'src/ui/JukeboxLayer.hpp').read_text(encoding='utf-8')
-local_library = (root / 'src/core/LocalLibrary.hpp').read_text(encoding='utf-8')
-music_hook = (root / 'src/hooks/MusicDownloadManager.cpp').read_text(encoding='utf-8')
+main = (root / "src/main.cpp").read_text(encoding="utf-8")
+jukebox = (root / "src/ui/JukeboxLayer.hpp").read_text(encoding="utf-8")
+local_library = (root / "src/core/LocalLibrary.hpp").read_text(encoding="utf-8")
+music_hook = (root / "src/hooks/MusicDownloadManager.cpp").read_text(encoding="utf-8")
 
 assert '#include "ui/JukeboxLayer.hpp"' in main
-assert 'GFNJukeboxLayer::create()' in main
-assert 'getChildByID(\"bottom-menu\")' in main
-assert 'onOpenGFNJukebox' in main
-assert 'fallbackMenu' in main
-assert 'gfn-open-jukebox' in main
-assert 'listenForKeybindSettingPresses' in main
-assert 'listenForKeybindSettingPresses' in main
-assert 'class GFNJukeboxLayer' in jukebox
-assert 'onClose' in jukebox
-assert 'void loadSongs(int page = 1)' in jukebox
-assert 'loadNongs(' in jukebox
-assert '/api/v1/catalog/songs' in jukebox
-assert 'limit=7' in jukebox
-assert 'TextInput::create' in jukebox
-assert 'onSearch' in jukebox
-assert 'onClearSearch' in jukebox
-assert 'onPairWebsite' in jukebox
-assert 'requestPairingCode' in jukebox
-assert '/api/v1/pairing/request' in jukebox
-assert 'onSyncWebsite' in jukebox
-assert 'syncWebsiteSelections' in jukebox
-assert '/api/v1/sync/' in jukebox
-assert 'RemoteSelection' in jukebox
-assert 'actualHash != item.sha256' in jukebox
-assert 'validAudioPayload' in jukebox
-assert 'MAX_AUDIO_BYTES = 30u * 1024u * 1024u' in jukebox
-assert 'invalid audio container or file exceeds 30 MiB' in jukebox
-assert 'find_first_not_of("0123456789")' in jukebox
-assert 'clearPathForSong(item.songId)' in jukebox
-assert '/api/v1/selections/save' in jukebox
-assert '/api/v1/nongs/' in jukebox
-assert 'onUseOriginal' in jukebox
-assert 'geode::sha256' in jukebox
-assert 'AsyncRelease hold' in jukebox
-assert 'local_library::setPathForSong' in jukebox
-assert 'local_library::clearPathForSong' in jukebox
-assert 'WebRequest()' in jukebox
-assert 'isLocalHttp(m_baseUrl, "http://localhost")' in jukebox
-assert "boundary == ':' || boundary == '/'" in jukebox
-assert 'setPathForSong' in local_library
-assert 'pathForSong(int songID)' in music_hook
+assert "GFNJukeboxLayer::create()" in main
+assert "onOpenGFNJukebox" in main
+assert "fallbackMenu" in main
+assert "gfn-open-jukebox" in main
+assert "listenForKeybindSettingPresses" in main
+assert "class GFNJukeboxLayer" in jukebox
+assert "onClose" in jukebox
+assert "showLibrary()" in jukebox
+assert "onRefresh" in jukebox
+assert "onDelete" in jukebox
+assert "song-" in jukebox
+assert "installedSongIDs()" in jukebox
+assert "std::filesystem::directory_iterator" in local_library
+assert "supportedAudioExtension" in local_library
+assert "getSaveDir()" in local_library
+assert "deleteManagedFileForSong" in local_library
+assert "pathForSong(int songID)" in music_hook
+assert "local_library::pathForSong" in music_hook
 
-print('GD Free NONGs metadata and source-wiring checks passed.')
-print('Note: these checks do not compile or run the Geode mod.')
+for source in (jukebox, local_library, music_hook):
+    for forbidden in ("WebRequest", "/api/v1/", "https://", "api-url", "Cloudflare"):
+        assert forbidden not in source, f"Remote dependency found in Geode source: {forbidden}"
+
+print("GD Free NONGs offline metadata and source-wiring checks passed.")
+print("Note: these checks do not compile or run the Geode mod.")
