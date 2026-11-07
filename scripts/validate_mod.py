@@ -30,6 +30,11 @@ assert "onClose" in jukebox
 assert "showLibrary()" in jukebox
 assert "onRefresh" in jukebox
 assert "onDelete" in jukebox
+assert "onImportAudio" in jukebox
+assert "geode::utils::file::pick" in jukebox
+assert "geode::utils::file::readBinary" in jukebox
+assert "geode::utils::file::writeBinarySafe" in jukebox
+assert "validAudioPayload" in jukebox
 assert "song-" in jukebox
 assert "installedSongIDs()" in jukebox
 assert "std::filesystem::directory_iterator" in local_library
