@@ -2,6 +2,7 @@
 
 #include <Geode/Geode.hpp>
 #include <algorithm>
+#include <cstdint>
 #include <filesystem>
 #include <sstream>
 #include <string>
@@ -80,7 +81,7 @@ namespace gfn::local_library {
         return mod->getSavedValue<std::string>(keyForSong(songID), "");
     }
 
-    inline uintmax_t fileSizeForSong(int songID) {
+    inline std::uintmax_t fileSizeForSong(int songID) {
         auto path = pathForSong(songID);
         if (path.empty()) return 0;
         std::error_code error;
