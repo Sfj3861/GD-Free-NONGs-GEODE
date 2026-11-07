@@ -729,6 +729,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 request.header("Content-Type", "application/json")
                     .timeout(std::chrono::seconds(20))
                     .bodyString(body);
+                showMenu();
                 setStatus("Audio verified. Saving your selection...");
                 this->retain();
                 geode::async::spawn(
@@ -943,8 +944,8 @@ public:
     void onCancelDownload(cocos2d::CCObject*) {
         if (!m_downloadTask.isPending()) return;
         m_downloadTask.cancel();
-        setStatus("NONG download cancelled.");
         showNongs();
+        setStatus("NONG download cancelled.");
     }
 
     void onRetryDownload(cocos2d::CCObject*) {
