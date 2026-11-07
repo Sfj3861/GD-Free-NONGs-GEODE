@@ -390,8 +390,19 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
             auto item = cocos2d::CCMenuItemLabel::create(label, this, menu_selector(GFNJukeboxLayer::onRestoreLocalSong));
             if (!item) continue;
             item->setTag(songId);
-            item->setPosition({ 0.f, 105.f - static_cast<float>(i - start) * thirtyFive() });
+            const float rowY = 105.f - static_cast<float>(i - start) * thirtyFive();
+            item->setPosition({ -35.f, rowY });
             m_menu->addChild(item);
+
+            auto deleteLabel = cocos2d::CCLabelTTF::create("Delete", "bigFont.fnt", 0.30f);
+            auto deleteButton = deleteLabel ? cocos2d::CCMenuItemLabel::create(
+                deleteLabel, this, menu_selector(GFNJukeboxLayer::onDeleteLocalFile)
+            ) : nullptr;
+            if (deleteButton) {
+                deleteButton->setTag(songId);
+                deleteButton->setPosition({ 175.f, rowY });
+                m_menu->addChild(deleteButton);
+            }
         }
 
         if (m_libraryPage > 1) {
@@ -782,6 +793,21 @@ public:
         setStatus(fmt::format("Original song {} restored.", songId));
         showLocalLibrary();
     }
+    void onDeleteLocalFile(cocos2d::CCObject* sender) {
+        auto item = static_cast<cocos2d::CCMenuItem*>(sender);
+        const int songId = item ? item->getTag() : 0;
+        if (songId <= 0) return;
+        if (!gfn::local_library::deleteManagedFileForSong(songId)) {
+            setStatus(fmt::format(
+                "Could not delete song {}: file missing or outside the mod's managed folder.",
+                songId
+            ));
+            return;
+        }
+        setStatus(fmt::format("Managed NONG file for song {} deleted.", songId));
+        showLocalLibrary();
+    }
+
     void onBackFromLibrary(cocos2d::CCObject*) { showSongs(); }
 
     void onPairWebsite(cocos2d::CCObject*) { requestPairingCode(); }
