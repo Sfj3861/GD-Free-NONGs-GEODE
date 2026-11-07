@@ -5,10 +5,12 @@
 #include "../core/LocalLibrary.hpp"
 #include <algorithm>
 #include <cstdint>
+#include <cctype>
 #include <cstring>
 #include <span>
 #include <filesystem>
 #include <string>
+#include <utility>
 #include <vector>
 
 class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
