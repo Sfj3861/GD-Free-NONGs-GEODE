@@ -111,6 +111,17 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         }
     }
 
+    static std::string requestFailure(
+        std::string_view operation,
+        geode::utils::web::WebResponse const& response
+    ) {
+        const auto detail = response.errorMessage();
+        if (!detail.empty()) {
+            return fmt::format("{} failed: {}", operation, detail);
+        }
+        return fmt::format("{} failed (HTTP {}).", operation, response.code());
+    }
+
     bool configureServer() {
         auto mod = geode::Mod::get();
         m_baseUrl = mod ? mod->getSettingValue<std::string>("api-url") : "";
@@ -225,7 +236,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
-                    setStatus(fmt::format("Catalogue request failed (HTTP {}).", response.code()));
+                    setStatus(requestFailure("Catalogue request", response));
                     return;
                 }
                 auto parsed = response.json();
@@ -273,7 +284,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
-                    setStatus(fmt::format("NONG list request failed (HTTP {}).", response.code()));
+                    setStatus(requestFailure("NONG list request", response));
                     return;
                 }
                 auto parsed = response.json();
@@ -440,7 +451,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
-                    setStatus(fmt::format("Pairing request failed (HTTP {}).", response.code()));
+                    setStatus(requestFailure("Pairing request", response));
                     return;
                 }
                 auto parsed = response.json();
@@ -568,7 +579,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
-                    setStatus(fmt::format("Website sync failed (HTTP {}).", response.code()));
+                    setStatus(requestFailure("Website sync", response));
                     return;
                 }
                 auto parsed = response.json();
@@ -738,9 +749,9 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                         AsyncRelease hold{ this };
                         if (!this->getParent()) return;
                         if (!saved.ok()) {
-                            failDownload(fmt::format(
-                                "Audio downloaded, but selection save failed (HTTP {}).",
-                                saved.code()
+                            failDownload(requestFailure(
+                                "Audio downloaded, but selection save",
+                                saved
                             ));
                             return;
                         }
@@ -982,7 +993,7 @@ public:
                 AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!response.ok()) {
-                    setStatus(fmt::format("Could not save original selection (HTTP {}).", response.code()));
+                    setStatus(requestFailure("Saving original song selection", response));
                     return;
                 }
                 gfn::local_library::clearPathForSong(numericSongId);
