@@ -664,7 +664,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         showDownloadProgress();
 
         const auto downloadUrl = baseUrl + "/api/v1/nongs/" + std::to_string(entry.id) + "/download";
-        auto request = geode::utils::web::WebRequest().timeout(std::chrono::seconds(90));
+        auto request = geode::utils::web::WebRequest();
+        request.timeout(std::chrono::seconds(90));
         request.onProgress([this](geode::utils::web::WebProgress const& progress) {
             if (!this->getParent()) return;
             const auto downloaded = progress.downloaded();
