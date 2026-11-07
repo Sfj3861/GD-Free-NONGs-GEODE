@@ -36,7 +36,7 @@ void openGFNJukebox() {
 }
 
 $on_mod(Loaded) {
-    log::info("GD Free NONGs v0.2.0 loaded.");
+    log::info("GD Free NONGs v0.3.0 (offline) loaded.");
 }
 
 $on_game(Loaded) {
