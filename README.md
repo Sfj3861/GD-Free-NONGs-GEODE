@@ -18,6 +18,8 @@ The in-game product name is **GD Free NONGs**. “GEODE” is used only for the 
 - SHA-256 verification before any downloaded audio is registered.
 - Local song resolver hook with fallback to the original game path when no valid local file is registered.
 - Restore-original action for a song.
+- Local NONG library with installed song IDs, managed audio filenames, file sizes, and paginated navigation.
+- Restore or delete managed NONG files from the local library; deletion is restricted to matching audio files inside the mod's own save directory.
 - One-time browser/game pairing: the Jukebox requests a 16-character code that expires after 10 minutes and can only be claimed once from the web PAIR tab.
 - Pairing requests and claims are rate-limited by the API-observed client IP; production deployments behind a reverse proxy must also apply edge rate limiting.
 - **Sync website** fetches selections associated with the paired game device, downloads approved NONGs, validates their SHA-256 values, and installs local replacements. Original or unavailable selections clear the corresponding local replacement.
