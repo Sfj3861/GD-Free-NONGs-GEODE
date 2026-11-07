@@ -15,7 +15,7 @@ namespace gfn::local_library {
         return fmt::format("local-nong-path-{}", songID);
     }
 
-    inline std::vector<int> installedSongIDs() {
+    inline std::vector<int> indexedSongIDs() {
         auto mod = geode::Mod::get();
         if (!mod) return {};
         auto raw = mod->getSavedValue<std::string>(INDEX_KEY, "");
@@ -34,6 +34,13 @@ namespace gfn::local_library {
                 // Ignore malformed legacy index entries.
             }
         }
+        return ids;
+    }
+
+    inline std::vector<int> installedSongIDs() {
+        auto mod = geode::Mod::get();
+        if (!mod) return {};
+        auto ids = indexedSongIDs();
 
         // Recover older installations by matching registered song files.
         std::error_code scanError;
@@ -95,7 +102,7 @@ namespace gfn::local_library {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return;
         mod->setSavedValue(keyForSong(songID), path);
-        auto ids = installedSongIDs();
+        auto ids = indexedSongIDs();
         if (!path.empty() && std::find(ids.begin(), ids.end(), songID) == ids.end()) {
             ids.push_back(songID);
             saveInstalledSongIDs(ids);
@@ -133,7 +140,7 @@ namespace gfn::local_library {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return;
         mod->setSavedValue(keyForSong(songID), std::string{});
-        auto ids = installedSongIDs();
+        auto ids = indexedSongIDs();
         ids.erase(std::remove(ids.begin(), ids.end(), songID), ids.end());
         saveInstalledSongIDs(ids);
     }
