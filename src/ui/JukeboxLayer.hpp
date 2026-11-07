@@ -9,6 +9,7 @@
 #include <cstring>
 #include <algorithm>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <random>
 #include <span>
@@ -53,6 +54,8 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     int m_libraryPage = 1;
     static constexpr size_t LIBRARY_PAGE_SIZE = 7;
     std::string m_searchQuery;
+    geode::async::TaskHolder<geode::utils::web::WebResponse> m_downloadTask;
+    std::optional<NongEntry> m_retryEntry;
     geode::TextInput* m_searchInput = nullptr;
     cocos2d::CCLabelTTF* m_status = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
@@ -604,8 +607,49 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         );
     }
 
+    void showDownloadProgress() {
+        showMenu();
+        auto label = cocos2d::CCLabelTTF::create("Cancel download", "bigFont.fnt", 0.38f);
+        auto button = label ? cocos2d::CCMenuItemLabel::create(
+            label, this, menu_selector(GFNJukeboxLayer::onCancelDownload)
+        ) : nullptr;
+        if (button) {
+            button->setPosition({ 0.f, -150.f });
+            m_menu->addChild(button);
+        }
+    }
+
+    void showDownloadFailure() {
+        showMenu();
+        auto retryLabel = cocos2d::CCLabelTTF::create("Retry download", "bigFont.fnt", 0.38f);
+        auto retry = retryLabel ? cocos2d::CCMenuItemLabel::create(
+            retryLabel, this, menu_selector(GFNJukeboxLayer::onRetryDownload)
+        ) : nullptr;
+        if (retry) {
+            retry->setPosition({ 0.f, -125.f });
+            m_menu->addChild(retry);
+        }
+        auto backLabel = cocos2d::CCLabelTTF::create("Back to NONGs", "bigFont.fnt", 0.36f);
+        auto back = backLabel ? cocos2d::CCMenuItemLabel::create(
+            backLabel, this, menu_selector(GFNJukeboxLayer::onBackToNongsAfterDownload)
+        ) : nullptr;
+        if (back) {
+            back->setPosition({ 0.f, -165.f });
+            m_menu->addChild(back);
+        }
+    }
+
+    void failDownload(std::string const& message) {
+        setStatus(message);
+        showDownloadFailure();
+    }
+
     void saveSelectionAndDownload(NongEntry entry) {
         if (m_currentSongId.empty()) return;
+        if (m_downloadTask.isPending()) {
+            setStatus("A NONG download is already running.");
+            return;
+        }
         int numericSongId = 0;
         try {
             numericSongId = std::stoi(m_currentSongId);
@@ -615,37 +659,64 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         }
         const auto songId = m_currentSongId;
         const auto baseUrl = m_baseUrl;
-        setStatus("Downloading and verifying NONG audio...");
+        m_retryEntry = entry;
+        setStatus("Starting NONG download...");
+        showDownloadProgress();
+
         const auto downloadUrl = baseUrl + "/api/v1/nongs/" + std::to_string(entry.id) + "/download";
-        this->retain();
-        geode::async::spawn(
-            geode::utils::web::WebRequest().timeout(std::chrono::seconds(90)).get(downloadUrl),
+        auto request = geode::utils::web::WebRequest().timeout(std::chrono::seconds(90));
+        request.onProgress([this](geode::utils::web::WebProgress const& progress) {
+            if (!this->getParent()) return;
+            const auto downloaded = progress.downloaded();
+            const auto total = progress.downloadTotal();
+            if (auto percent = progress.downloadProgress()) {
+                setStatus(fmt::format(
+                    "Downloading NONG audio... {:.0f}% ({:.1f} / {:.1f} MiB)",
+                    *percent,
+                    downloaded / (1024.0 * 1024.0),
+                    total / (1024.0 * 1024.0)
+                ));
+            } else {
+                setStatus(fmt::format(
+                    "Downloading NONG audio... {:.1f} MiB received",
+                    downloaded / (1024.0 * 1024.0)
+                ));
+            }
+        });
+
+        m_downloadTask.spawn(
+            request.get(downloadUrl),
             [this, entry, songId, numericSongId, baseUrl](geode::utils::web::WebResponse audio) {
-                AsyncRelease hold{ this };
                 if (!this->getParent()) return;
                 if (!audio.ok()) {
-                    setStatus(fmt::format("Download failed (HTTP {}).", audio.code()));
+                    const auto detail = audio.errorMessage();
+                    failDownload(detail.empty()
+                        ? fmt::format("Download failed (HTTP {}).", audio.code())
+                        : fmt::format("Download failed: {}", detail));
                     return;
                 }
                 auto audioBytes = std::span<uint8_t const>(
                     audio.data().data(), audio.data().size()
                 );
                 if (!validAudioPayload(entry.format, audioBytes)) {
-                    setStatus("Download rejected: invalid audio container or file exceeds 30 MiB.");
+                    failDownload("Download rejected: invalid audio container or file exceeds 30 MiB.");
                     return;
                 }
                 auto actualHash = geode::sha256(audioBytes).toString();
                 if (actualHash != entry.sha256) {
-                    setStatus("Download rejected: SHA-256 checksum mismatch.");
+                    failDownload("Download rejected: SHA-256 checksum mismatch.");
                     return;
                 }
                 auto mod = geode::Mod::get();
-                if (!mod) return;
+                if (!mod) {
+                    failDownload("Could not access the mod save directory.");
+                    return;
+                }
                 auto filename = fmt::format("song-{}.{}", songId, entry.format);
                 auto target = mod->getSaveDir() / filename;
                 auto written = audio.into(target);
                 if (!written) {
-                    setStatus("Could not write the downloaded audio file.");
+                    failDownload("Could not write the downloaded audio file.");
                     return;
                 }
 
@@ -665,15 +736,21 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
                         AsyncRelease hold{ this };
                         if (!this->getParent()) return;
                         if (!saved.ok()) {
-                            setStatus(fmt::format("Audio downloaded, but selection save failed (HTTP {}).", saved.code()));
+                            failDownload(fmt::format(
+                                "Audio downloaded, but selection save failed (HTTP {}).",
+                                saved.code()
+                            ));
                             return;
                         }
                         gfn::local_library::setPathForSong(numericSongId, target.string());
+                        m_retryEntry.reset();
                         setStatus("NONG installed and selected for this song!");
+                        showNongs();
                     }
                 );
             }
         );
+        m_downloadTask.setName("GD Free NONGs audio download");
     }
 
 public:
@@ -860,6 +937,22 @@ public:
         auto index = item ? item->getTag() : -1;
         if (index < 0 || static_cast<size_t>(index) >= m_nongs.size()) return;
         saveSelectionAndDownload(m_nongs[index]);
+    }
+
+    void onCancelDownload(cocos2d::CCObject*) {
+        if (!m_downloadTask.isPending()) return;
+        m_downloadTask.cancel();
+        setStatus("NONG download cancelled.");
+        showNongs();
+    }
+
+    void onRetryDownload(cocos2d::CCObject*) {
+        if (!m_retryEntry) return;
+        saveSelectionAndDownload(*m_retryEntry);
+    }
+
+    void onBackToNongsAfterDownload(cocos2d::CCObject*) {
+        showNongs();
     }
 
     void onUseOriginal(cocos2d::CCObject*) {
