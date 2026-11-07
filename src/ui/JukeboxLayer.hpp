@@ -52,6 +52,24 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     cocos2d::CCLabelTTF* m_status = nullptr;
     cocos2d::CCMenu* m_menu = nullptr;
 
+    static std::string urlEncode(std::string_view value) {
+        std::string encoded;
+        encoded.reserve(value.size());
+        for (unsigned char byte : value) {
+            const bool unreserved =
+                (byte >= 'A' && byte <= 'Z') ||
+                (byte >= 'a' && byte <= 'z') ||
+                (byte >= '0' && byte <= '9') ||
+                byte == '-' || byte == '_' || byte == '.' || byte == '~';
+            if (unreserved) {
+                encoded.push_back(static_cast<char>(byte));
+            } else {
+                encoded += fmt::format("%{:02X}", static_cast<unsigned int>(byte));
+            }
+        }
+        return encoded;
+    }
+
     static bool validAudioPayload(std::string_view format, std::span<uint8_t const> bytes) {
         constexpr size_t MAX_AUDIO_BYTES = 30u * 1024u * 1024u;
         if (bytes.empty() || bytes.size() > MAX_AUDIO_BYTES) return false;
@@ -190,7 +208,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         setStatus("Loading community catalogue...");
         auto url = fmt::format(
             "{}/api/v1/catalog/songs?page={}&limit=7&q={}",
-            m_baseUrl, page, m_searchQuery
+            m_baseUrl, page, urlEncode(m_searchQuery)
         );
         this->retain();
         geode::async::spawn(
@@ -586,10 +604,9 @@ public:
             this->addChild(m_status);
         }
 
-        m_searchInput = geode::TextInput::create(size.width * 0.48f, "Search by GD song ID");
+        m_searchInput = geode::TextInput::create(size.width * 0.48f, "Search song name or GD song ID");
         if (m_searchInput) {
-            m_searchInput->setCommonFilter(geode::CommonFilter::Uint);
-            m_searchInput->setMaxCharCount(32);
+            m_searchInput->setMaxCharCount(100);
             m_searchInput->setTextAlign(geode::TextInputAlign::Center);
             m_searchInput->setScale(0.75f);
             m_searchInput->setPosition({ size.width * 0.39f, size.height * 0.59f });
