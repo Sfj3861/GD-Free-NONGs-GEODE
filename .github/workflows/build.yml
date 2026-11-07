@@ -27,7 +27,7 @@ jobs:
 
       - name: Build with the Geode SDK version from mod.json
         id: build
-        uses: geode-sdk/build-geode-mod@main
+        uses: geode-sdk/build-geode-mod@61a56c697aea9655e3f31c6c1b83870431f30434
         with:
           sdk: given
           target: ${{ matrix.target }}
