@@ -362,7 +362,7 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
         }
     }
 
-    std::string formatFileSize(uintmax_t bytes) const {
+    std::string formatFileSize(std::uintmax_t bytes) const {
         if (bytes < 1024) return fmt::format("{} B", bytes);
         if (bytes < 1024 * 1024) return fmt::format("{:.1f} KiB", bytes / 1024.0);
         return fmt::format("{:.1f} MiB", bytes / (1024.0 * 1024.0));
