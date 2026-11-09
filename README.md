@@ -23,6 +23,7 @@ Supported extensions: MP3, OGG, WAV, FLAC and M4A.
 - Displays filename and file size, with seven entries per page.
 - Re-scans the folder on refresh.
 - Deletes only a matching managed audio file whose canonical parent directory is the mod's own save directory.
+- Records an explicit local disable marker after deletion, so leftover alternate-format files for the same song ID cannot be silently reactivated. Importing that song again clears the marker.
 - Falls back to the original Geometry Dash audio if no local replacement is registered or the file is unavailable.
 
 The browser and the game do not share storage. Exporting the file and importing it through Geode's system file picker is the deliberate offline bridge; no pairing or network connection is used.
