@@ -10,6 +10,7 @@
 
 namespace gfn::local_library {
     inline constexpr char INDEX_KEY[] = "local-nong-song-ids";
+    inline constexpr char DISABLED_INDEX_KEY[] = "local-nong-disabled-song-ids";
 
     inline std::string keyForSong(int songID) {
         return fmt::format("local-nong-path-{}", songID);
@@ -54,10 +55,48 @@ namespace gfn::local_library {
         mod->setSavedValue(INDEX_KEY, raw);
     }
 
+    inline std::vector<int> disabledSongIDs() {
+        auto mod = geode::Mod::get();
+        if (!mod) return {};
+        const auto raw = mod->getSavedValue<std::string>(DISABLED_INDEX_KEY, "");
+        std::vector<int> ids;
+        std::stringstream stream(raw);
+        std::string token;
+        while (std::getline(stream, token, ',')) {
+            try {
+                size_t consumed = 0;
+                const int id = std::stoi(token, &consumed);
+                if (consumed == token.size() && id > 0 &&
+                    std::find(ids.begin(), ids.end(), id) == ids.end()) {
+                    ids.push_back(id);
+                }
+            } catch (...) {
+                // Ignore malformed disabled-index entries.
+            }
+        }
+        return ids;
+    }
+
+    inline void saveDisabledSongIDs(std::vector<int> const& ids) {
+        auto mod = geode::Mod::get();
+        if (!mod) return;
+        std::string raw;
+        for (int id : ids) {
+            if (id <= 0) continue;
+            if (!raw.empty()) raw += ',';
+            raw += std::to_string(id);
+        }
+        mod->setSavedValue(DISABLED_INDEX_KEY, raw);
+    }
+
     inline std::vector<int> installedSongIDs() {
         auto mod = geode::Mod::get();
         if (!mod) return {};
         auto ids = indexedSongIDs();
+        const auto disabled = disabledSongIDs();
+        ids.erase(std::remove_if(ids.begin(), ids.end(), [&](int id) {
+            return std::find(disabled.begin(), disabled.end(), id) != disabled.end();
+        }), ids.end());
 
         // Discover exported song-ID files copied into the mod's save directory.
         std::error_code scanError;
@@ -77,7 +116,8 @@ namespace gfn::local_library {
                 const auto idText = filename.substr(5, dot - 5);
                 size_t consumed = 0;
                 const int id = std::stoi(idText, &consumed);
-                if (consumed != idText.size() || id <= 0) continue;
+                if (consumed != idText.size() || id <= 0 ||
+                    std::find(disabled.begin(), disabled.end(), id) != disabled.end()) continue;
 
                 const auto candidate = it->path().string();
                 const auto registered = mod->getSavedValue<std::string>(keyForSong(id), "");
@@ -121,6 +161,9 @@ namespace gfn::local_library {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return;
         mod->setSavedValue(keyForSong(songID), path);
+        auto disabled = disabledSongIDs();
+        disabled.erase(std::remove(disabled.begin(), disabled.end(), songID), disabled.end());
+        saveDisabledSongIDs(disabled);
         auto ids = indexedSongIDs();
         if (!path.empty() && std::find(ids.begin(), ids.end(), songID) == ids.end()) {
             ids.push_back(songID);
@@ -157,6 +200,11 @@ namespace gfn::local_library {
         const bool removed = std::filesystem::remove(file, error);
         if (error || !removed) return false;
         clearPathForSong(songID);
+        auto disabled = disabledSongIDs();
+        if (std::find(disabled.begin(), disabled.end(), songID) == disabled.end()) {
+            disabled.push_back(songID);
+            saveDisabledSongIDs(disabled);
+        }
         return true;
     }
 }
