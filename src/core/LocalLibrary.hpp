@@ -180,6 +180,19 @@ namespace gfn::local_library {
         saveInstalledSongIDs(ids);
     }
 
+    inline void disableSongForSong(int songID) {
+        auto mod = geode::Mod::get();
+        if (!mod || songID <= 0) return;
+
+        // Keep stale alternate-format files from being rediscovered after the active file is gone.
+        auto disabled = disabledSongIDs();
+        if (std::find(disabled.begin(), disabled.end(), songID) == disabled.end()) {
+            disabled.push_back(songID);
+            saveDisabledSongIDs(disabled);
+        }
+        clearPathForSong(songID);
+    }
+
     inline bool deleteManagedFileForSong(int songID) {
         auto mod = geode::Mod::get();
         if (!mod || songID <= 0) return false;
@@ -199,12 +212,7 @@ namespace gfn::local_library {
 
         const bool removed = std::filesystem::remove(file, error);
         if (error || !removed) return false;
-        clearPathForSong(songID);
-        auto disabled = disabledSongIDs();
-        if (std::find(disabled.begin(), disabled.end(), songID) == disabled.end()) {
-            disabled.push_back(songID);
-            saveDisabledSongIDs(disabled);
-        }
+        disableSongForSong(songID);
         return true;
     }
 }
