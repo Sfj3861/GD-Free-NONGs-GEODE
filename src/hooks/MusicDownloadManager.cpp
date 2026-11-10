@@ -24,7 +24,7 @@ class $modify(GFNMusicDownloadManager, MusicDownloadManager) {
                 "Selected NONG for song {} is unavailable; using the original song.",
                 songID
             );
-            gfn::local_library::clearPathForSong(songID);
+            gfn::local_library::disableSongForSong(songID);
             return MusicDownloadManager::pathForSong(songID);
         }
 
