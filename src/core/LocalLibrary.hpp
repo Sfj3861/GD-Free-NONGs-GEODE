@@ -93,7 +93,7 @@ namespace gfn::local_library {
         auto mod = geode::Mod::get();
         if (!mod) return {};
         auto ids = indexedSongIDs();
-        const auto disabled = disabledSongIDs();
+        auto disabled = disabledSongIDs();
         ids.erase(std::remove_if(ids.begin(), ids.end(), [&](int id) {
             return std::find(disabled.begin(), disabled.end(), id) != disabled.end();
         }), ids.end());
@@ -121,13 +121,29 @@ namespace gfn::local_library {
 
                 const auto candidate = it->path().string();
                 const auto registered = mod->getSavedValue<std::string>(keyForSong(id), "");
-                std::error_code registeredError;
-                const bool registeredExists = !registered.empty() &&
-                    std::filesystem::is_regular_file(registered, registeredError) &&
-                    !registeredError;
-                if (!registeredExists) {
+
+                if (!registered.empty()) {
+                    std::error_code registeredError;
+                    const bool registeredExists =
+                        std::filesystem::is_regular_file(registered, registeredError);
+
+                    // Do not silently select an older alternate-format file when the
+                    // previously active file has disappeared. A filesystem error is
+                    // inconclusive, so preserve the registration and try again later.
+                    if (registeredError) continue;
+                    if (!registeredExists) {
+                        if (std::find(disabled.begin(), disabled.end(), id) == disabled.end()) {
+                            disabled.push_back(id);
+                            saveDisabledSongIDs(disabled);
+                        }
+                        mod->setSavedValue(keyForSong(id), std::string{});
+                        ids.erase(std::remove(ids.begin(), ids.end(), id), ids.end());
+                        continue;
+                    }
+                } else {
                     mod->setSavedValue(keyForSong(id), candidate);
                 }
+
                 const auto activePath = mod->getSavedValue<std::string>(keyForSong(id), "");
                 if (activePath == candidate &&
                     std::find(ids.begin(), ids.end(), id) == ids.end()) {
