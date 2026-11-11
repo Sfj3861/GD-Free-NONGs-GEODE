@@ -125,13 +125,23 @@ namespace gfn::local_library {
                 if (!registered.empty()) {
                     std::error_code registeredError;
                     const bool registeredExists =
-                        std::filesystem::is_regular_file(registered, registeredError);
+                        std::filesystem::exists(registered, registeredError);
+
+                    // A missing path is a normal "not found" result for exists().
+                    // Other filesystem errors are inconclusive, so preserve the registration.
+                    if (registeredError) continue;
+
+                    bool registeredIsFile = false;
+                    if (registeredExists) {
+                        std::error_code registeredTypeError;
+                        registeredIsFile =
+                            std::filesystem::is_regular_file(registered, registeredTypeError);
+                        if (registeredTypeError) continue;
+                    }
 
                     // Do not silently select an older alternate-format file when the
-                    // previously active file has disappeared. A filesystem error is
-                    // inconclusive, so preserve the registration and try again later.
-                    if (registeredError) continue;
-                    if (!registeredExists) {
+                    // previously active file has disappeared or is no longer a file.
+                    if (!registeredIsFile) {
                         if (std::find(disabled.begin(), disabled.end(), id) == disabled.end()) {
                             disabled.push_back(id);
                             saveDisabledSongIDs(disabled);
