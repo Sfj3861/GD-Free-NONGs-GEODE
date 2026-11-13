@@ -15,6 +15,7 @@
 
 class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     static constexpr size_t PAGE_SIZE = 7;
+    static constexpr std::uintmax_t MAX_AUDIO_BYTES = 30u * 1024u * 1024u;
     struct AsyncRelease { GFNJukeboxLayer* layer; ~AsyncRelease() { layer->release(); } };
     int m_page = 1;
     std::vector<int> m_songIds;
@@ -43,7 +44,6 @@ class GFNJukeboxLayer final : public cocos2d::CCLayerColor {
     }
 
     static bool validAudioPayload(std::string const& extension, std::span<uint8_t const> bytes) {
-        constexpr size_t MAX_AUDIO_BYTES = 30u * 1024u * 1024u;
         if (bytes.empty() || bytes.size() > MAX_AUDIO_BYTES) return false;
         if (extension == "mp3") {
             return (bytes.size() >= 3 && std::memcmp(bytes.data(), "ID3", 3) == 0) ||
@@ -206,6 +206,22 @@ public:
                 if (extension != "mp3" && extension != "ogg" && extension != "wav" &&
                     extension != "flac" && extension != "m4a") {
                     setStatus("Unsupported audio format.");
+                    return;
+                }
+
+                const auto sourcePath = std::filesystem::path(source.string());
+                std::error_code sourceError;
+                const auto sourceSize = std::filesystem::file_size(sourcePath, sourceError);
+                if (sourceError) {
+                    setStatus(fmt::format("Could not inspect selected audio file: {}", sourceError.message()));
+                    return;
+                }
+                if (sourceSize == 0) {
+                    setStatus("Selected audio file is empty.");
+                    return;
+                }
+                if (sourceSize > MAX_AUDIO_BYTES) {
+                    setStatus("Audio file exceeds the 30 MiB limit.");
                     return;
                 }
 
