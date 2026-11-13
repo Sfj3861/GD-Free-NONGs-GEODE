@@ -33,6 +33,9 @@ assert "onDelete" in jukebox
 assert "onImportAudio" in jukebox
 assert "geode::utils::file::pick" in jukebox
 assert "geode::utils::file::readBinary" in jukebox
+assert "MAX_AUDIO_BYTES = 30u * 1024u * 1024u" in jukebox
+assert "std::filesystem::file_size(sourcePath, sourceError)" in jukebox
+assert jukebox.index("std::filesystem::file_size(sourcePath, sourceError)") < jukebox.index("geode::utils::file::readBinary(source)")
 assert "geode::utils::file::writeBinarySafe" in jukebox
 assert "validAudioPayload" in jukebox
 assert "song-" in jukebox
