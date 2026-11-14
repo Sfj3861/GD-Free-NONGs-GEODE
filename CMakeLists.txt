@@ -6,7 +6,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(NOT DEFINED ENV{GEODE_SDK})
-    message(FATAL_ERROR "GEODE_SDK is not set. Install Geode v6.0.0-alpha.1 SDK and point GEODE_SDK to it.")
+    message(FATAL_ERROR "GEODE_SDK is not set. Install the Geode SDK version declared in mod.json and point GEODE_SDK to it.")
 endif()
 
 add_subdirectory($ENV{GEODE_SDK} ${CMAKE_CURRENT_BINARY_DIR}/geode)
