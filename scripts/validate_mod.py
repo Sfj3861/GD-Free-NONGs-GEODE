@@ -5,9 +5,9 @@ root = Path(__file__).resolve().parents[1]
 metadata = json.loads((root / "mod.json").read_text(encoding="utf-8"))
 
 assert metadata["name"] == "GD Free NONGs"
-assert metadata["geode"] == "6.0.0-alpha.1"
-assert metadata["gd"]["win"] == "2.2091"
-assert metadata["gd"]["android"] == "2.2091"
+assert metadata["geode"] == "5.11.2"
+assert metadata["gd"]["win"] == "2.2081"
+assert metadata["gd"]["android"] == "2.2081"
 assert metadata["id"] == "sfj3861.gdfreenongs"
 assert metadata["version"] == "v0.3.0"
 assert metadata["settings"]["open-jukebox"]["type"] == "keybind"
