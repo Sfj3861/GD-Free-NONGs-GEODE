@@ -2,7 +2,7 @@
 
 A fully local Geometry Dash mod for managing alternative song files. The mod does not contact a remote API, use Cloudflare, require FastAPI, or depend on a cloud service.
 
-**Targets:** Geometry Dash 2.2091 · Geode SDK 6.0.0-alpha.1.
+**Targets:** Geometry Dash 2.2081 · Geode SDK 5.11.2.
 
 ## How the offline workflow works
 
@@ -30,8 +30,8 @@ The browser and the game do not share storage. Exporting the file and importing 
 
 ## Compatibility and build
 
-- Geometry Dash 2.2091 (Windows and Android)
-- Geode SDK 6.0.0-alpha.1
+- Geometry Dash 2.2081 (Windows and Android64)
+- Geode SDK 5.11.2
 - C++20
 
 ~~~bash
