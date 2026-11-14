@@ -1,5 +1,10 @@
 # Changelog
 
+## Compatibility build: Geometry Dash 2.2081
+- Added a dedicated build configuration for Geode SDK 5.11.2.
+- Kept the main 2.2091 / Geode 6.0.0-alpha.1 configuration unchanged on main.
+- Runtime testing on Geometry Dash 2.2081 is still required.
+
 ## v0.2.0
 - Added the in-game Jukebox catalogue backed by the community API.
 - Added approved NONG listing per Geometry Dash song.
