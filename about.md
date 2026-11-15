@@ -1,9 +1,26 @@
 # GD Free NONGs
 
-A community-powered alternative audio manager for Geometry Dash.
+GD Free NONGs is an offline Geometry Dash mod for managing local replacement audio. It does not connect to a website, remote API, cloud storage or backend.
 
-The in-game Jukebox connects to the GD Free NONGs API. Players can browse a searchable, paginated song catalogue, view approved alternative audio versions, download and verify a selected file using SHA-256, and restore the original song.
+## Local workflow
 
-The browser can be paired with a game installation using a one-time code. Once paired, website selections are assigned to the game device. The Jukebox's **Sync website** action downloads the associated approved audio and applies local replacements after integrity verification.
+1. Import an audio file into the companion browser library in the [GD Free NONGs repository](https://github.com/Sfj3861/GD-Free-NONGs).
+2. Export the selected version. The browser downloads it as `song-<GD_ID>.<extension>`.
+3. Open the in-game Jukebox and choose **Import audio**.
+4. Select the exported file with the system file picker. The mod validates the filename, supported format, audio signature and 30 MiB size limit.
+5. The mod copies the file into its private save directory and applies it to the matching Geometry Dash song ID.
+6. Use **Delete** in My NONGs to remove the managed replacement and restore the original game audio.
 
-This is an early development build. CI packages are built for Windows and Android64, but real in-game testing is still required. Direct in-game uploading, pagination of per-song NONG lists, hosted production infrastructure and full account authentication are not implemented. The API must be separately deployed and configured in the mod.
+Supported formats: MP3, OGG, WAV, FLAC and M4A.
+
+## Compatibility
+
+- Geometry Dash 2.2091 (Windows and Android64)
+- Geode SDK 6.0.0-alpha.1
+- C++20
+
+Windows and Android64 CI builds are automated. A successful build verifies compilation and packaging, but does not replace runtime testing inside Geometry Dash on each platform.
+
+## Audio rights
+
+Only import and use audio you own or are authorized to use. A Geometry Dash or Newgrounds ID is an identifier, not permission to redistribute a track.
